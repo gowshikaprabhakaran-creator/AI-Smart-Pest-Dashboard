@@ -1,82 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>AI Smart Pest Detection - Team 16</title>
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <link rel="stylesheet" href="style.css">
+    <title>
+        AI Smart Pest Detection - Team 16
+    </title>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Main CSS -->
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
+    <!-- Teachable Machine Image Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
+    <!-- EmailJS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
+
 
 <body>
 
-<div class="app">
+    <!-- ================================================= -->
+    <!-- SIDEBAR -->
+    <!-- ================================================= -->
 
-    <!-- ================= SIDEBAR ================= -->
     <aside class="sidebar">
 
         <div class="logo">
-            <div class="logo-icon">🌱</div>
+
+            <div class="logo-icon">
+                🌱
+            </div>
 
             <div>
-                <h2 data-en="AgriSmart" data-ta="அக்ரிஸ்மார்ட்">AgriSmart</h2>
-                <span data-en="Team 16" data-ta="அணி 16">Team 16</span>
+                <h2>AI Smart Pest</h2>
+                <p>Team 16</p>
             </div>
+
         </div>
+
 
         <nav>
 
-            <button class="nav-item active" data-target="dashboard">
-                📊
-                <span data-en="Dashboard" data-ta="முகப்பு">Dashboard</span>
+            <button
+                class="nav-link"
+                data-target="dashboard"
+            >
+                🏠 <span data-i18n="dashboard">Dashboard</span>
             </button>
 
-            <button class="nav-item" data-target="detection">
-                🤖
-                <span data-en="AI Detection" data-ta="AI பூச்சி கண்டறிதல்">
-                    AI Detection
-                </span>
+
+            <button
+                class="nav-link"
+                data-target="aiDetection"
+            >
+                🤖 <span data-i18n="aiDetection">AI Detection</span>
             </button>
 
-            <button class="nav-item" data-target="analytics">
-                📈
-                <span data-en="Analytics" data-ta="புள்ளிவிவரங்கள்">
-                    Analytics
-                </span>
+
+            <button
+                class="nav-link"
+                data-target="analytics"
+            >
+                📊 <span data-i18n="analytics">Analytics</span>
             </button>
 
-            <button class="nav-item" data-target="sensors">
-                📡
-                <span data-en="Sensors" data-ta="சென்சார்கள்">
-                    Sensors
-                </span>
+
+            <button
+                class="nav-link"
+                data-target="sensors"
+            >
+                📡 <span data-i18n="sensors">Sensors</span>
             </button>
 
-            <button class="nav-item" data-target="alerts">
-                🚨
-                <span data-en="Alerts" data-ta="எச்சரிக்கைகள்">
-                    Alerts
-                </span>
+
+            <button
+                class="nav-link"
+                data-target="alerts"
+            >
+                🚨 <span data-i18n="alerts">Alerts</span>
             </button>
 
-            <button class="nav-item" data-target="history">
-                🕘
-                <span data-en="History" data-ta="வரலாறு">
-                    History
-                </span>
+
+            <button
+                class="nav-link"
+                data-target="history"
+            >
+                📋 <span data-i18n="history">History</span>
             </button>
 
         </nav>
 
+
         <div class="team-box">
 
-            <strong data-en="Team 16" data-ta="அணி 16">
-                Team 16
-            </strong>
+            <strong>Team 16</strong>
 
             <p>Gowshika P</p>
             <p>Indumala R</p>
@@ -87,647 +122,553 @@
     </aside>
 
 
-    <!-- ================= MAIN CONTENT ================= -->
-    <main class="main">
 
-        <!-- TOP BAR -->
+    <!-- ================================================= -->
+    <!-- MAIN CONTENT -->
+    <!-- ================================================= -->
+
+    <main class="main-content">
+
+
+        <!-- HEADER -->
+
         <header class="topbar">
 
             <div>
-                <h1
-                    data-en="AI Smart Pest Detection & Alert"
-                    data-ta="AI ஸ்மார்ட் பூச்சி கண்டறிதல் மற்றும் எச்சரிக்கை">
-                    AI Smart Pest Detection & Alert
+
+                <h1>
+                    AI Smart Pest Detection
                 </h1>
 
-                <p
-                    data-en="Smart agriculture monitoring system"
-                    data-ta="ஸ்மார்ட் விவசாய கண்காணிப்பு அமைப்பு">
-                    Smart agriculture monitoring system
+                <p>
+                    AI-based crop pest monitoring system
                 </p>
-            </div>
-
-
-            <!-- LANGUAGE -->
-            <div class="language-box">
-
-                <span>🌐</span>
-
-                <select id="languageSelect">
-
-                    <option value="en">
-                        English
-                    </option>
-
-                    <option value="ta">
-                        தமிழ்
-                    </option>
-
-                </select>
 
             </div>
+
+
+            <select
+                id="languageSelector"
+                class="language-selector"
+            >
+
+                <option value="en">
+                    English
+                </option>
+
+                <option value="ta">
+                    தமிழ்
+                </option>
+
+            </select>
 
         </header>
 
 
-        <!-- ================= ALL PAGE CONTENT ================= -->
-        <div class="page-content">
+
+        <!-- ================================================= -->
+        <!-- DASHBOARD -->
+        <!-- ================================================= -->
+
+        <section
+            id="dashboard"
+            class="section"
+        >
+
+            <div class="section-title">
+
+                <h2 data-i18n="dashboard">
+                    Dashboard
+                </h2>
+
+                <span
+                    id="modelStatus"
+                    class="model-status"
+                >
+                    Loading AI Model...
+                </span>
+
+            </div>
 
 
-            <!-- ================= DASHBOARD ================= -->
-            <section id="dashboard" class="page-section">
-
-                <div class="section-title">
-
-                    <h2
-                        data-en="Dashboard"
-                        data-ta="முகப்பு">
-                        Dashboard
-                    </h2>
-
-                    <p
-                        data-en="Monitor your smart farming system"
-                        data-ta="உங்கள் ஸ்மார்ட் விவசாய அமைப்பை கண்காணிக்கவும்">
-                        Monitor your smart farming system
-                    </p>
-
-                </div>
+            <div class="stats-grid">
 
 
-                <!-- STAT CARDS -->
-                <div class="stats-grid">
+                <div class="stat-card">
 
-                    <div class="stat-card">
-
-                        <div class="stat-icon">🔍</div>
-
-                        <div>
-                            <span
-                                data-en="Total Detections"
-                                data-ta="மொத்த கண்டறிதல்கள்">
-                                Total Detections
-                            </span>
-
-                            <h3 id="totalDetections">0</h3>
-                        </div>
-
+                    <div class="stat-icon">
+                        🔍
                     </div>
-
-
-                    <div class="stat-card danger">
-
-                        <div class="stat-icon">⚠️</div>
-
-                        <div>
-                            <span
-                                data-en="Active Threats"
-                                data-ta="செயலில் உள்ள அச்சுறுத்தல்கள்">
-                                Active Threats
-                            </span>
-
-                            <h3 id="activeThreats">0</h3>
-                        </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-icon">📧</div>
-
-                        <div>
-                            <span
-                                data-en="Email Alerts"
-                                data-ta="மின்னஞ்சல் எச்சரிக்கைகள்">
-                                Email Alerts
-                            </span>
-
-                            <h3 id="emailAlerts">0</h3>
-                        </div>
-
-                    </div>
-
-
-                    <div class="stat-card success">
-
-                        <div class="stat-icon">🟢</div>
-
-                        <div>
-                            <span
-                                data-en="System Status"
-                                data-ta="அமைப்பு நிலை">
-                                System Status
-                            </span>
-
-                            <h3
-                                data-en="Online"
-                                data-ta="ஆன்லைன்">
-                                Online
-                            </h3>
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- QUICK INFO -->
-                <div class="dashboard-card quick-card">
 
                     <div>
 
-                        <h3
-                            data-en="Smart Farming Monitoring"
-                            data-ta="ஸ்மார்ட் விவசாய கண்காணிப்பு">
-                            Smart Farming Monitoring
-                        </h3>
+                        <p>Total Detections</p>
 
-                        <p
-                            data-en="Detect pests, monitor sensors and receive alerts from one dashboard."
-                            data-ta="பூச்சிகளை கண்டறிந்து, சென்சார்களை கண்காணித்து, ஒரே dashboard மூலம் எச்சரிக்கைகளைப் பெறலாம்.">
-                            Detect pests, monitor sensors and receive alerts from one dashboard.
-                        </p>
+                        <h2 id="totalDetections">
+                            0
+                        </h2>
 
                     </div>
 
-                    <button
-                        class="primary-btn"
-                        onclick="scrollToSection('detection')">
+                </div>
 
-                        <span
-                            data-en="Start AI Detection"
-                            data-ta="AI கண்டறிதலை தொடங்கவும்">
-                            Start AI Detection
+
+
+                <div class="stat-card danger">
+
+                    <div class="stat-icon">
+                        ⚠️
+                    </div>
+
+                    <div>
+
+                        <p>Active Threats</p>
+
+                        <h2 id="activeThreats">
+                            0
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        📧
+                    </div>
+
+                    <div>
+
+                        <p>Email Alerts</p>
+
+                        <h2 id="emailAlerts">
+                            0
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="stat-card safe">
+
+                    <div class="stat-icon">
+                        🟢
+                    </div>
+
+                    <div>
+
+                        <p>System Status</p>
+
+                        <h2>
+                            Online
+                        </h2>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ================================================= -->
+        <!-- AI DETECTION -->
+        <!-- ================================================= -->
+
+        <section
+            id="aiDetection"
+            class="section"
+        >
+
+            <div class="section-title">
+
+                <h2 data-i18n="aiDetection">
+                    AI Detection
+                </h2>
+
+            </div>
+
+
+            <div class="detection-grid">
+
+
+                <!-- CAMERA -->
+
+                <div class="card">
+
+                    <h3>
+                        📷 Camera Detection
+                    </h3>
+
+                    <p class="muted">
+                        Use your phone camera to capture a crop image.
+                    </p>
+
+
+                    <video
+                        id="camera"
+                        autoplay
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-buttons">
+
+                        <button
+                            id="startCamera"
+                            class="primary-btn"
+                        >
+                            📷 Start Camera
+                        </button>
+
+
+                        <button
+                            id="switchCamera"
+                            class="secondary-btn"
+                        >
+                            🔄 Switch Camera
+                        </button>
+
+
+                        <button
+                            id="captureImage"
+                            class="secondary-btn"
+                        >
+                            📸 Capture
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- UPLOAD -->
+
+                <div class="card">
+
+                    <h3>
+                        🖼️ Upload Image
+                    </h3>
+
+                    <p class="muted">
+                        Upload a pest or crop image for AI analysis.
+                    </p>
+
+
+                    <label
+                        for="imageInput"
+                        class="upload-box"
+                    >
+
+                        <span>
+                            📁
                         </span>
 
+                        <strong>
+                            Choose Image
+                        </strong>
+
+                        <small>
+                            JPG / PNG
+                        </small>
+
+                    </label>
+
+
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/*"
+                    >
+
+                </div>
+
+            </div>
+
+
+
+            <!-- PREVIEW + RESULT -->
+
+            <div class="detection-result-grid">
+
+
+                <div class="card">
+
+                    <h3>
+                        Image Preview
+                    </h3>
+
+                    <img
+                        id="previewImage"
+                        alt="Preview"
+                    >
+
+                </div>
+
+
+
+                <div class="card result-card">
+
+                    <h3>
+                        🤖 AI Result
+                    </h3>
+
+
+                    <div class="result-box">
+
+                        <p>
+                            Detected Pest
+                        </p>
+
+                        <h1 id="pestName">
+                            --
+                        </h1>
+
+
+                        <p>
+                            Confidence
+                        </p>
+
+                        <h2 id="confidence">
+                            --
+                        </h2>
+
+
+                        <div
+                            id="detectionStatus"
+                            class="detection-status"
+                        >
+                            Waiting
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        id="detectButton"
+                        class="detect-btn"
+                    >
+                        🔍 Detect Pest
                     </button>
 
                 </div>
 
-            </section>
+            </div>
+
+        </section>
 
 
 
-            <!-- ================= AI DETECTION ================= -->
-            <section id="detection" class="page-section">
+        <!-- ================================================= -->
+        <!-- ANALYTICS -->
+        <!-- ================================================= -->
 
-                <div class="section-title">
+        <section
+            id="analytics"
+            class="section"
+        >
 
-                    <h2
-                        data-en="AI Pest Detection"
-                        data-ta="AI பூச்சி கண்டறிதல்">
-                        AI Pest Detection
-                    </h2>
+            <div class="section-title">
 
-                    <p
-                        data-en="Upload a crop image or use your camera"
-                        data-ta="பயிர் படத்தை பதிவேற்றவும் அல்லது கேமராவைப் பயன்படுத்தவும்">
-                        Upload a crop image or use your camera
+                <h2 data-i18n="analytics">
+                    Analytics
+                </h2>
+
+            </div>
+
+
+            <div class="chart-grid">
+
+                <div class="card chart-card">
+
+                    <h3>
+                        Pest Detection Count
+                    </h3>
+
+                    <canvas
+                        id="pestChart"
+                    ></canvas>
+
+                </div>
+
+
+                <div class="card chart-card">
+
+                    <h3>
+                        Detection Trend
+                    </h3>
+
+                    <canvas
+                        id="trendChart"
+                    ></canvas>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ================================================= -->
+        <!-- SENSORS -->
+        <!-- ================================================= -->
+
+        <section
+            id="sensors"
+            class="section"
+        >
+
+            <div class="section-title">
+
+                <h2 data-i18n="sensors">
+                    Sensors
+                </h2>
+
+            </div>
+
+
+            <div class="sensor-grid">
+
+
+                <div class="sensor-card">
+
+                    <span>
+                        🌡️
+                    </span>
+
+                    <p>
+                        Temperature
                     </p>
 
-                </div>
-
-
-                <div class="detection-grid">
-
-
-                    <!-- IMAGE INPUT -->
-                    <div class="dashboard-card">
-
-                        <h3
-                            data-en="Crop Image Input"
-                            data-ta="பயிர் பட உள்ளீடு">
-                            Crop Image Input
-                        </h3>
-
-
-                        <div class="upload-area">
-
-                            <div class="upload-icon">
-                                📷
-                            </div>
-
-                            <h3
-                                data-en="Upload Crop Image"
-                                data-ta="பயிர் படத்தை பதிவேற்றவும்">
-                                Upload Crop Image
-                            </h3>
-
-                            <p
-                                data-en="Select a clear image of the crop"
-                                data-ta="பயிரின் தெளிவான படத்தைத் தேர்ந்தெடுக்கவும்">
-                                Select a clear image of the crop
-                            </p>
-
-
-                            <input
-                                type="file"
-                                id="imageInput"
-                                accept="image/*"
-                                hidden>
-
-
-                            <button
-                                class="primary-btn"
-                                onclick="document.getElementById('imageInput').click()">
-
-                                <span
-                                    data-en="Choose Image"
-                                    data-ta="படத்தைத் தேர்ந்தெடுக்கவும்">
-                                    Choose Image
-                                </span>
-
-                            </button>
-
-                        </div>
-
-
-                        <div class="camera-buttons">
-
-                            <button
-                                class="secondary-btn"
-                                id="openCameraBtn">
-
-                                📷
-
-                                <span
-                                    data-en="Open Camera"
-                                    data-ta="கேமராவைத் திறக்கவும்">
-                                    Open Camera
-                                </span>
-
-                            </button>
-
-
-                            <button
-                                class="primary-btn"
-                                id="captureBtn"
-                                disabled>
-
-                                📸
-
-                                <span
-                                    data-en="Capture Image"
-                                    data-ta="படத்தைப் பிடிக்கவும்">
-                                    Capture Image
-                                </span>
-
-                            </button>
-
-                        </div>
-
-
-                        <video
-                            id="camera"
-                            autoplay
-                            playsinline>
-                        </video>
-
-
-                        <canvas id="canvas"></canvas>
-
-
-                        <img
-                            id="previewImage"
-                            class="preview-image"
-                            alt="Crop Preview">
-
-                    </div>
-
-
-
-                    <!-- RESULT -->
-                    <div class="dashboard-card">
-
-                        <h3
-                            data-en="Detection Result"
-                            data-ta="கண்டறிதல் முடிவு">
-                            Detection Result
-                        </h3>
-
-
-                        <div class="result-box">
-
-                            <div class="result-icon">
-                                🌿
-                            </div>
-
-
-                            <h2
-                                id="pestName"
-                                data-en="No Detection"
-                                data-ta="கண்டறிதல் இல்லை">
-                                No Detection
-                            </h2>
-
-
-                            <p>
-
-                                <span
-                                    data-en="Confidence"
-                                    data-ta="நம்பகத்தன்மை">
-                                    Confidence
-                                </span>
-
-                                :
-
-                                <strong id="confidence">
-                                    --
-                                </strong>
-
-                            </p>
-
-
-                            <div
-                                class="status-badge"
-                                id="detectionStatus">
-
-                                <span
-                                    data-en="Waiting for image"
-                                    data-ta="படத்திற்காக காத்திருக்கிறது">
-                                    Waiting for image
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="email-status">
-
-                            📧
-
-                            <span
-                                data-en="Email Alert"
-                                data-ta="மின்னஞ்சல் எச்சரிக்கை">
-                                Email Alert
-                            </span>
-
-                            :
-
-                            <strong id="emailStatus">
-                                --
-                            </strong>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-
-            <!-- ================= ANALYTICS ================= -->
-            <section id="analytics" class="page-section">
-
-                <div class="section-title">
-
-                    <h2
-                        data-en="Analytics"
-                        data-ta="புள்ளிவிவரங்கள்">
-                        Analytics
+                    <h2 id="temperature">
+                        -- °C
                     </h2>
 
-                    <p
-                        data-en="Pest detection statistics"
-                        data-ta="பூச்சி கண்டறிதல் புள்ளிவிவரங்கள்">
-                        Pest detection statistics
+                </div>
+
+
+
+                <div class="sensor-card">
+
+                    <span>
+                        💧
+                    </span>
+
+                    <p>
+                        Humidity
                     </p>
 
-                </div>
-
-
-                <div class="chart-grid">
-
-                    <div class="dashboard-card">
-
-                        <h3
-                            data-en="Pest Detection Count"
-                            data-ta="பூச்சி கண்டறிதல் எண்ணிக்கை">
-                            Pest Detection Count
-                        </h3>
-
-                        <canvas id="pestChart"></canvas>
-
-                    </div>
-
-
-                    <div class="dashboard-card">
-
-                        <h3
-                            data-en="Detection Trend"
-                            data-ta="கண்டறிதல் போக்கு">
-                            Detection Trend
-                        </h3>
-
-                        <canvas id="trendChart"></canvas>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-
-            <!-- ================= SENSORS ================= -->
-            <section id="sensors" class="page-section">
-
-                <div class="section-title">
-
-                    <h2
-                        data-en="Smart Sensors"
-                        data-ta="ஸ்மார்ட் சென்சார்கள்">
-                        Smart Sensors
+                    <h2 id="humidity">
+                        -- %
                     </h2>
 
-                    <p
-                        data-en="Monitor field conditions"
-                        data-ta="வயல் நிலைமைகளை கண்காணிக்கவும்">
-                        Monitor field conditions
+                </div>
+
+
+
+                <div class="sensor-card">
+
+                    <span>
+                        📏
+                    </span>
+
+                    <p>
+                        Ultrasonic Distance
                     </p>
 
-                </div>
-
-
-                <div class="sensor-grid">
-
-
-                    <div class="sensor-card">
-
-                        <div class="sensor-icon">
-                            👁️
-                        </div>
-
-                        <h3
-                            data-en="IR Pest Sensor"
-                            data-ta="IR பூச்சி சென்சார்">
-                            IR Pest Sensor
-                        </h3>
-
-                        <strong
-                            id="irValue"
-                            data-en="Normal"
-                            data-ta="இயல்பு">
-                            Normal
-                        </strong>
-
-                        <p
-                            data-en="Pest movement"
-                            data-ta="பூச்சி இயக்கம்">
-                            Pest movement
-                        </p>
-
-                    </div>
-
-
-                    <div class="sensor-card">
-
-                        <div class="sensor-icon">
-                            📡
-                        </div>
-
-                        <h3
-                            data-en="Ultrasonic Distance"
-                            data-ta="அல்ட்ராசோனிக் தூரம்">
-                            Ultrasonic Distance
-                        </h3>
-
-                        <strong id="distanceValue">
-                            25 cm
-                        </strong>
-
-                        <p
-                            data-en="Measured distance"
-                            data-ta="அளவிடப்பட்ட தூரம்">
-                            Measured distance
-                        </p>
-
-                    </div>
-
-
-                    <div class="sensor-card">
-
-                        <div class="sensor-icon">
-                            🌡️
-                        </div>
-
-                        <h3
-                            data-en="Temperature"
-                            data-ta="வெப்பநிலை">
-                            Temperature
-                        </h3>
-
-                        <strong id="temperatureValue">
-                            28°C
-                        </strong>
-
-                        <p
-                            data-en="Current temperature"
-                            data-ta="தற்போதைய வெப்பநிலை">
-                            Current temperature
-                        </p>
-
-                    </div>
-
-
-                    <div class="sensor-card">
-
-                        <div class="sensor-icon">
-                            💧
-                        </div>
-
-                        <h3
-                            data-en="Humidity"
-                            data-ta="ஈரப்பதம்">
-                            Humidity
-                        </h3>
-
-                        <strong id="humidityValue">
-                            65%
-                        </strong>
-
-                        <p
-                            data-en="Current humidity"
-                            data-ta="தற்போதைய ஈரப்பதம்">
-                            Current humidity
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-
-            <!-- ================= ALERTS ================= -->
-            <section id="alerts" class="page-section">
-
-                <div class="section-title">
-
-                    <h2
-                        data-en="Alerts"
-                        data-ta="எச்சரிக்கைகள்">
-                        Alerts
+                    <h2 id="distance">
+                        -- cm
                     </h2>
 
-                    <p
-                        data-en="Recent pest detection alerts"
-                        data-ta="சமீபத்திய பூச்சி கண்டறிதல் எச்சரிக்கைகள்">
-                        Recent pest detection alerts
+                </div>
+
+
+
+                <div class="sensor-card">
+
+                    <span>
+                        🔴
+                    </span>
+
+                    <p>
+                        IR Pest Sensor
                     </p>
 
-                </div>
-
-
-                <div class="dashboard-card">
-
-                    <div id="alertsList">
-
-                        <div class="empty-state">
-
-                            🔔
-
-                            <p
-                                data-en="No alerts yet"
-                                data-ta="இதுவரை எச்சரிக்கைகள் இல்லை">
-                                No alerts yet
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-
-            <!-- ================= HISTORY ================= -->
-            <section id="history" class="page-section">
-
-                <div class="section-title">
-
-                    <h2
-                        data-en="Detection History"
-                        data-ta="கண்டறிதல் வரலாறு">
-                        Detection History
+                    <h2 id="irStatus">
+                        Waiting
                     </h2>
 
-                    <p
-                        data-en="Previous pest detection records"
-                        data-ta="முந்தைய பூச்சி கண்டறிதல் பதிவுகள்">
-                        Previous pest detection records
-                    </p>
-
                 </div>
 
+            </div>
 
-                <div class="dashboard-card table-card">
+        </section>
+
+
+
+        <!-- ================================================= -->
+        <!-- ALERTS -->
+        <!-- ================================================= -->
+
+        <section
+            id="alerts"
+            class="section"
+        >
+
+            <div class="section-title">
+
+                <h2 data-i18n="alerts">
+                    Alerts
+                </h2>
+
+            </div>
+
+
+            <div
+                id="alertContainer"
+                class="alerts-container"
+            >
+
+                <div class="empty-state">
+                    No pest alerts yet.
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ================================================= -->
+        <!-- HISTORY -->
+        <!-- ================================================= -->
+
+        <section
+            id="history"
+            class="section"
+        >
+
+            <div class="section-title">
+
+                <h2 data-i18n="history">
+                    Detection History
+                </h2>
+
+            </div>
+
+
+            <div class="card table-card">
+
+                <div class="table-wrapper">
 
                     <table>
 
@@ -735,28 +676,20 @@
 
                             <tr>
 
-                                <th
-                                    data-en="Date & Time"
-                                    data-ta="தேதி மற்றும் நேரம்">
-                                    Date & Time
+                                <th>
+                                    Date
                                 </th>
 
-                                <th
-                                    data-en="Pest"
-                                    data-ta="பூச்சி">
+                                <th>
+                                    Time
+                                </th>
+
+                                <th>
                                     Pest
                                 </th>
 
-                                <th
-                                    data-en="Confidence"
-                                    data-ta="நம்பகத்தன்மை">
+                                <th>
                                     Confidence
-                                </th>
-
-                                <th
-                                    data-en="Status"
-                                    data-ta="நிலை">
-                                    Status
                                 </th>
 
                             </tr>
@@ -764,19 +697,7 @@
                         </thead>
 
 
-                        <tbody id="historyTable">
-
-                            <tr>
-
-                                <td
-                                    colspan="4"
-                                    class="empty-table"
-                                    data-en="No detection history"
-                                    data-ta="கண்டறிதல் வரலாறு இல்லை">
-                                    No detection history
-                                </td>
-
-                            </tr>
+                        <tbody id="historyBody">
 
                         </tbody>
 
@@ -784,43 +705,33 @@
 
                 </div>
 
-            </section>
+            </div>
 
+        </section>
 
-        </div>
 
 
         <!-- FOOTER -->
+
         <footer>
 
+            <strong>
+                AI Smart Pest Detection & Alert System
+            </strong>
+
             <p>
-
-                © 2026
-
-                <span
-                    data-en="AI Smart Pest Detection & Alert System"
-                    data-ta="AI ஸ்மார்ட் பூச்சி கண்டறிதல் மற்றும் எச்சரிக்கை அமைப்பு">
-                    AI Smart Pest Detection & Alert System
-                </span>
-
-                -
-
-                <strong
-                    data-en="Team 16"
-                    data-ta="அணி 16">
-                    Team 16
-                </strong>
-
+                Team 16 | ESP32 + AI
             </p>
 
         </footer>
 
     </main>
 
-</div>
 
+    <!-- JavaScript -->
 
-<script src="script.js"></script>
+    <script src="script.js"></script>
 
 </body>
+
 </html>
