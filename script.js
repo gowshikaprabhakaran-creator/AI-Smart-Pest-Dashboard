@@ -9,22 +9,17 @@
 // CONFIGURATION
 // ============================================================
 
-// IMPORTANT:
-// Your Teachable Machine files are inside:
-//
-// model/
-// ├── model.json
-// ├── metadata.json
-// └── weights.bin
-//
-// So the model path is:
-
+// Teachable Machine model folder
 const MODEL_URL = "./model/";
+
+// Cache-busting version
+// Change this number whenever the model files are updated.
+const MODEL_VERSION = "20260926-2";
 
 
 // EmailJS
 const EMAIL_SERVICE_ID =
-    "service_x2d7sjh";
+    "service_x2d7sj";
 
 const EMAIL_TEMPLATE_ID =
     "template_6efhw0d";
@@ -38,24 +33,16 @@ const EMAIL_PUBLIC_KEY =
 // ============================================================
 
 let model = null;
-
 let modelLoaded = false;
 
 let uploadedImage = null;
-
 let cameraStream = null;
 
-
-// Default camera = BACK camera
 let currentCamera = "environment";
 
-
 let totalDetections = 0;
-
 let activeThreats = 0;
-
 let emailAlerts = 0;
-
 
 let detectionHistory = [];
 
@@ -65,9 +52,7 @@ let detectionHistory = [];
 // ============================================================
 
 emailjs.init({
-
     publicKey: EMAIL_PUBLIC_KEY
-
 });
 
 
@@ -80,13 +65,9 @@ document.addEventListener(
     async function () {
 
         setupImageUpload();
-
         setupCamera();
-
         setupDetectionButton();
-
         setupLanguage();
-
         setupNavigation();
 
         updateSensorDisplay();
@@ -94,7 +75,6 @@ document.addEventListener(
         await loadAIModel();
 
         updateDashboard();
-
         updateCharts();
 
     }
@@ -108,10 +88,7 @@ document.addEventListener(
 async function loadAIModel() {
 
     const status =
-        document.getElementById(
-            "modelStatus"
-        );
-
+        document.getElementById("modelStatus");
 
     try {
 
@@ -124,17 +101,46 @@ async function loadAIModel() {
 
 
         console.log(
-            "Loading Teachable Machine model..."
+            "================================"
+        );
+
+        console.log(
+            "Loading Teachable Machine Model"
+        );
+
+        console.log(
+            "Model version:",
+            MODEL_VERSION
+        );
+
+
+        // Cache-busting URLs
+        const modelFile =
+            MODEL_URL +
+            "model.json?v=" +
+            MODEL_VERSION;
+
+        const metadataFile =
+            MODEL_URL +
+            "metadata.json?v=" +
+            MODEL_VERSION;
+
+
+        console.log(
+            "Model URL:",
+            modelFile
+        );
+
+        console.log(
+            "Metadata URL:",
+            metadataFile
         );
 
 
         model =
             await tmImage.load(
-
-                MODEL_URL + "model.json",
-
-                MODEL_URL + "metadata.json"
-
+                modelFile,
+                metadataFile
             );
 
 
@@ -143,6 +149,16 @@ async function loadAIModel() {
 
         console.log(
             "AI model loaded successfully."
+        );
+
+
+        // Show model class names
+        const classNames =
+            model.getClassLabels();
+
+        console.log(
+            "AI Classes:",
+            classNames
         );
 
 
@@ -155,6 +171,11 @@ async function loadAIModel() {
                 "model-status model-ready";
 
         }
+
+
+        console.log(
+            "================================"
+        );
 
 
     } catch (error) {
@@ -333,7 +354,6 @@ async function startCamera() {
     if (!video) return;
 
 
-    // Stop previous camera
     stopCamera();
 
 
@@ -345,10 +365,8 @@ async function startCamera() {
                 video: {
 
                     facingMode: {
-
                         ideal:
                             currentCamera
-
                     }
 
                 },
@@ -404,14 +422,10 @@ async function switchCamera() {
         "environment"
     ) {
 
-        // BACK → FRONT
-
         currentCamera =
             "user";
 
     } else {
-
-        // FRONT → BACK
 
         currentCamera =
             "environment";
@@ -498,7 +512,6 @@ function captureImage() {
     canvas.width =
         video.videoWidth;
 
-
     canvas.height =
         video.videoHeight;
 
@@ -510,17 +523,11 @@ function captureImage() {
 
 
     context.drawImage(
-
         video,
-
         0,
-
         0,
-
         canvas.width,
-
         canvas.height
-
     );
 
 
@@ -621,13 +628,53 @@ async function detectPest() {
 
     try {
 
+        console.log(
+            "Starting AI prediction..."
+        );
+
+
         const predictions =
             await model.predict(
-                uploadedImage
+                uploadedImage,
+                false
             );
 
 
-        // Find highest prediction
+        // ====================================================
+        // DEBUG: SHOW ALL AI PREDICTIONS
+        // ====================================================
+
+        console.log(
+            "========== AI PREDICTIONS =========="
+        );
+
+
+        predictions.forEach(
+            function (prediction) {
+
+                console.log(
+                    prediction.className +
+                    " : " +
+                    (
+                        prediction.probability *
+                        100
+                    ).toFixed(2) +
+                    "%"
+                );
+
+            }
+        );
+
+
+        console.log(
+            "===================================="
+        );
+
+
+        // ====================================================
+        // FIND HIGHEST PREDICTION
+        // ====================================================
+
         let bestPrediction =
             predictions[0];
 
@@ -639,11 +686,8 @@ async function detectPest() {
         ) {
 
             if (
-                predictions[i]
-                    .probability
-                >
-                bestPrediction
-                    .probability
+                predictions[i].probability >
+                bestPrediction.probability
             ) {
 
                 bestPrediction =
@@ -660,8 +704,8 @@ async function detectPest() {
 
         const confidence =
             (
-                bestPrediction.probability
-                * 100
+                bestPrediction.probability *
+                100
             ).toFixed(1);
 
 
@@ -679,15 +723,22 @@ async function detectPest() {
         };
 
 
-        displayResult(result);
+        console.log(
+            "FINAL RESULT:",
+            result.name,
+            result.confidence + "%"
+        );
 
+
+        displayResult(result);
 
         saveDetection(result);
 
 
-        // Email only for pest
+        // Email only when actual pest is detected
         if (
             pestName
+                .trim()
                 .toLowerCase()
                 !==
             "healthy leaf"
@@ -703,6 +754,7 @@ async function detectPest() {
         updateDashboard();
 
         updateCharts();
+
 
     } catch (error) {
 
@@ -810,7 +862,8 @@ function displayResult(result) {
     if (confidence) {
 
         confidence.textContent =
-            result.confidence + "%";
+            result.confidence +
+            "%";
 
     }
 
@@ -819,6 +872,7 @@ function displayResult(result) {
 
         const isHealthy =
             result.name
+                .trim()
                 .toLowerCase()
                 ===
             "healthy leaf";
@@ -880,8 +934,7 @@ function saveDetection(result) {
 
 
     if (
-        detectionHistory.length
-        >
+        detectionHistory.length >
         20
     ) {
 
@@ -895,6 +948,7 @@ function saveDetection(result) {
 
     if (
         result.name
+            .trim()
             .toLowerCase()
             !==
         "healthy leaf"
@@ -934,7 +988,8 @@ async function sendEmailAlert(
                     result.name,
 
                 confidence:
-                    result.confidence + "%",
+                    result.confidence +
+                    "%",
 
                 status:
                     "Pest Detected"
@@ -1043,26 +1098,20 @@ function updateHistory() {
 
             row.innerHTML = `
 
-                <td>
-                    ${item.date}
-                </td>
+                <td>${item.date}</td>
 
-                <td>
-                    ${item.time}
-                </td>
+                <td>${item.time}</td>
 
-                <td>
-                    ${item.pest}
-                </td>
+                <td>${item.pest}</td>
 
-                <td>
-                    ${item.confidence}
-                </td>
+                <td>${item.confidence}</td>
 
             `;
 
 
-            body.appendChild(row);
+            body.appendChild(
+                row
+            );
 
         }
     );
@@ -1091,6 +1140,7 @@ function updateAlerts() {
 
                 return (
                     item.pest
+                        .trim()
                         .toLowerCase()
                     !==
                     "healthy leaf"
@@ -1169,7 +1219,6 @@ function updateAlerts() {
 // ============================================================
 
 let pestChart = null;
-
 let trendChart = null;
 
 
@@ -1205,6 +1254,7 @@ function updateCharts() {
 
             if (
                 item.pest
+                    .trim()
                     .toLowerCase()
                 !==
                 "healthy leaf"
@@ -1245,9 +1295,7 @@ function updateCharts() {
 
     pestChart =
         new Chart(
-
             pestCanvas,
-
             {
 
                 type: "bar",
@@ -1279,11 +1327,8 @@ function updateCharts() {
                 }
 
             }
-
         );
 
-
-    // Trend chart
 
     const trendLabels =
         detectionHistory
@@ -1323,9 +1368,7 @@ function updateCharts() {
 
     trendChart =
         new Chart(
-
             trendCanvas,
-
             {
 
                 type: "line",
@@ -1360,7 +1403,6 @@ function updateCharts() {
                 }
 
             }
-
         );
 
 }
