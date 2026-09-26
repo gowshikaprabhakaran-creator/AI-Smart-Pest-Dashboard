@@ -1,443 +1,732 @@
-/* =====================================================
-   AI SMART PEST DETECTION
-   TEAM 16
-
-   Single Page Dashboard
-   English / Tamil
-   ===================================================== */
+// ============================================================
+// AI SMART PEST DETECTION & ALERT SYSTEM
+// TEAM 16
+// REAL TEACHABLE MACHINE MODEL
+// ============================================================
 
 
-/* ================= EMAILJS ================= */
+// ============================================================
+// CONFIGURATION
+// ============================================================
 
-const EMAILJS_SERVICE_ID = "service_x2d7sjh";
-const EMAILJS_TEMPLATE_ID = "template_6efhw0d";
-const EMAILJS_PUBLIC_KEY = "wOORs4b9toARevid-";
+// IMPORTANT:
+// Your Teachable Machine files are inside:
+//
+// model/
+// ├── model.json
+// ├── metadata.json
+// └── weights.bin
+//
+// So the model path is:
+
+const MODEL_URL = "./model/";
 
 
-emailjs.init({
-    publicKey: EMAILJS_PUBLIC_KEY
-});
+// EmailJS
+const EMAIL_SERVICE_ID =
+    "service_x2d7sjh";
+
+const EMAIL_TEMPLATE_ID =
+    "template_6efhw0d";
+
+const EMAIL_PUBLIC_KEY =
+    "wOORs4b9toARevid-";
 
 
-/* ================= VARIABLES ================= */
+// ============================================================
+// GLOBAL VARIABLES
+// ============================================================
 
-let currentLanguage = "en";
+let model = null;
 
-let totalDetections = 0;
-let activeThreats = 0;
-let emailAlerts = 0;
+let modelLoaded = false;
+
+let uploadedImage = null;
 
 let cameraStream = null;
 
-let historyData = [];
 
-let pestCounts = {
-    Aphid: 0,
-    Whitefly: 0,
-    Caterpillar: 0,
-    "Leaf Miner": 0,
-    Thrips: 0
-};
+// Default camera = BACK camera
+let currentCamera = "environment";
 
 
-/* ================= TRANSLATIONS ================= */
+let totalDetections = 0;
 
-const translations = {
+let activeThreats = 0;
 
-    en: {
+let emailAlerts = 0;
 
-        aphid: "Aphid",
-        whitefly: "Whitefly",
-        caterpillar: "Caterpillar",
-        leafMiner: "Leaf Miner",
-        thrips: "Thrips",
 
-        pestDetected: "Pest Detected",
-        detectionComplete: "Detection Complete",
+let detectionHistory = [];
 
-        emailSent: "Email Sent",
-        emailFailed: "Email Failed",
-        sending: "Sending...",
 
-        detected: "Detected"
+// ============================================================
+// EMAILJS INITIALIZATION
+// ============================================================
 
-    },
+emailjs.init({
 
-
-    ta: {
-
-        aphid: "அஃபிட்",
-        whitefly: "வெள்ளை ஈ",
-        caterpillar: "கம்பளிப்பூச்சி",
-        leafMiner: "இலை சுரங்கப் பூச்சி",
-        thrips: "த்ரிப்ஸ்",
-
-        pestDetected: "பூச்சி கண்டறியப்பட்டது",
-        detectionComplete: "கண்டறிதல் முடிந்தது",
-
-        emailSent: "மின்னஞ்சல் அனுப்பப்பட்டது",
-        emailFailed: "மின்னஞ்சல் அனுப்ப முடியவில்லை",
-        sending: "அனுப்பப்படுகிறது...",
-
-        detected: "கண்டறியப்பட்டது"
-
-    }
-
-};
-
-
-/* ================= LANGUAGE ================= */
-
-function changeLanguage(language) {
-
-    currentLanguage = language;
-
-    document.documentElement.lang =
-        language === "ta"
-            ? "ta"
-            : "en";
-
-
-    const elements =
-        document.querySelectorAll(
-            "[data-en][data-ta]"
-        );
-
-
-    elements.forEach(element => {
-
-        if (language === "ta") {
-
-            element.textContent =
-                element.getAttribute("data-ta");
-
-        } else {
-
-            element.textContent =
-                element.getAttribute("data-en");
-
-        }
-
-    });
-
-
-    updateDynamicText();
-
-    renderHistory();
-
-    updateAlertsLanguage();
-
-}
-
-
-/* ================= DYNAMIC TEXT ================= */
-
-function updateDynamicText() {
-
-    const pestName =
-        document.getElementById("pestName");
-
-
-    if (!pestName.dataset.pest) {
-        return;
-    }
-
-
-    pestName.textContent =
-        getPestDisplayName(
-            pestName.dataset.pest
-        );
-
-}
-
-
-/* ================= PEST NAME ================= */
-
-function getPestDisplayName(pest) {
-
-    if (currentLanguage === "ta") {
-
-        if (pest === "Aphid")
-            return translations.ta.aphid;
-
-        if (pest === "Whitefly")
-            return translations.ta.whitefly;
-
-        if (pest === "Caterpillar")
-            return translations.ta.caterpillar;
-
-        if (pest === "Leaf Miner")
-            return translations.ta.leafMiner;
-
-        if (pest === "Thrips")
-            return translations.ta.thrips;
-    }
-
-
-    return pest;
-}
-
-
-/* ================= LANGUAGE SELECTOR ================= */
-
-document
-    .getElementById("languageSelect")
-    .addEventListener(
-        "change",
-        function () {
-
-            changeLanguage(
-                this.value
-            );
-
-        }
-    );
-
-
-/* ================= SINGLE PAGE NAVIGATION ================= */
-
-const navItems =
-    document.querySelectorAll(".nav-item");
-
-
-navItems.forEach(item => {
-
-    item.addEventListener(
-        "click",
-        function () {
-
-            const target =
-                this.getAttribute(
-                    "data-target"
-                );
-
-            scrollToSection(target);
-
-        }
-    );
+    publicKey: EMAIL_PUBLIC_KEY
 
 });
 
 
-function scrollToSection(sectionId) {
+// ============================================================
+// PAGE LOAD
+// ============================================================
 
-    const section =
-        document.getElementById(
-            sectionId
-        );
+document.addEventListener(
+    "DOMContentLoaded",
+    async function () {
 
+        setupImageUpload();
 
-    if (!section) {
-        return;
-    }
+        setupCamera();
 
+        setupDetectionButton();
 
-    section.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-    });
+        setupLanguage();
 
+        setupNavigation();
 
-    navItems.forEach(item => {
+        updateSensorDisplay();
 
-        item.classList.remove("active");
+        await loadAIModel();
 
-        if (
-            item.getAttribute(
-                "data-target"
-            ) === sectionId
-        ) {
+        updateDashboard();
 
-            item.classList.add("active");
-
-        }
-
-    });
-
-}
-
-
-/* ================= UPDATE ACTIVE MENU WHILE SCROLLING ================= */
-
-const pageSections =
-    document.querySelectorAll(
-        ".page-section"
-    );
-
-
-window.addEventListener(
-    "scroll",
-    function () {
-
-        let currentSection = "dashboard";
-
-
-        pageSections.forEach(section => {
-
-            const top =
-                section.getBoundingClientRect().top;
-
-
-            if (top <= 150) {
-
-                currentSection =
-                    section.id;
-
-            }
-
-        });
-
-
-        navItems.forEach(item => {
-
-            item.classList.remove("active");
-
-
-            if (
-                item.getAttribute(
-                    "data-target"
-                ) === currentSection
-            ) {
-
-                item.classList.add("active");
-
-            }
-
-        });
+        updateCharts();
 
     }
 );
 
 
-/* ================= IMAGE UPLOAD ================= */
+// ============================================================
+// LOAD TEACHABLE MACHINE MODEL
+// ============================================================
 
-const imageInput =
-    document.getElementById(
-        "imageInput"
-    );
+async function loadAIModel() {
 
-
-imageInput.addEventListener(
-    "change",
-    function () {
-
-        const file =
-            this.files[0];
+    const status =
+        document.getElementById(
+            "modelStatus"
+        );
 
 
-        if (!file) {
-            return;
+    try {
+
+        if (status) {
+
+            status.textContent =
+                "Loading AI Model...";
+
         }
 
 
-        const reader =
-            new FileReader();
+        console.log(
+            "Loading Teachable Machine model..."
+        );
 
 
-        reader.onload =
-            function (event) {
+        model =
+            await tmImage.load(
 
-                const preview =
-                    document.getElementById(
-                        "previewImage"
-                    );
+                MODEL_URL + "model.json",
 
+                MODEL_URL + "metadata.json"
+
+            );
+
+
+        modelLoaded = true;
+
+
+        console.log(
+            "AI model loaded successfully."
+        );
+
+
+        if (status) {
+
+            status.textContent =
+                "AI Model Ready";
+
+            status.className =
+                "model-status model-ready";
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "AI model loading error:",
+            error
+        );
+
+
+        modelLoaded = false;
+
+
+        if (status) {
+
+            status.textContent =
+                "AI Model Error";
+
+            status.className =
+                "model-status model-error";
+
+        }
+
+
+        alert(
+            "AI model could not be loaded.\n\n" +
+            "Please check the model folder."
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// IMAGE UPLOAD
+// ============================================================
+
+function setupImageUpload() {
+
+    const input =
+        document.getElementById(
+            "imageInput"
+        );
+
+
+    if (!input) return;
+
+
+    input.addEventListener(
+        "change",
+        function (event) {
+
+            const file =
+                event.target.files[0];
+
+
+            if (!file) return;
+
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                function (e) {
+
+                    uploadedImage =
+                        new Image();
+
+
+                    uploadedImage.onload =
+                        function () {
+
+                            const preview =
+                                document.getElementById(
+                                    "previewImage"
+                                );
+
+
+                            if (preview) {
+
+                                preview.src =
+                                    e.target.result;
+
+                                preview.style.display =
+                                    "block";
+
+                            }
+
+                        };
+
+
+                    uploadedImage.src =
+                        e.target.result;
+
+                };
+
+
+            reader.readAsDataURL(file);
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// CAMERA SETUP
+// ============================================================
+
+function setupCamera() {
+
+    const startButton =
+        document.getElementById(
+            "startCamera"
+        );
+
+
+    const switchButton =
+        document.getElementById(
+            "switchCamera"
+        );
+
+
+    const captureButton =
+        document.getElementById(
+            "captureImage"
+        );
+
+
+    if (startButton) {
+
+        startButton.addEventListener(
+            "click",
+            startCamera
+        );
+
+    }
+
+
+    if (switchButton) {
+
+        switchButton.addEventListener(
+            "click",
+            switchCamera
+        );
+
+    }
+
+
+    if (captureButton) {
+
+        captureButton.addEventListener(
+            "click",
+            captureImage
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// START CAMERA
+// ============================================================
+
+async function startCamera() {
+
+    const video =
+        document.getElementById(
+            "camera"
+        );
+
+
+    if (!video) return;
+
+
+    // Stop previous camera
+    stopCamera();
+
+
+    try {
+
+        cameraStream =
+            await navigator.mediaDevices.getUserMedia({
+
+                video: {
+
+                    facingMode: {
+
+                        ideal:
+                            currentCamera
+
+                    }
+
+                },
+
+                audio: false
+
+            });
+
+
+        video.srcObject =
+            cameraStream;
+
+
+        video.style.display =
+            "block";
+
+
+        await video.play();
+
+
+        console.log(
+            "Camera started:",
+            currentCamera
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Camera error:",
+            error
+        );
+
+
+        alert(
+            "Camera could not be opened.\n\n" +
+            "Please allow camera permission."
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// SWITCH CAMERA
+// ============================================================
+
+async function switchCamera() {
+
+    if (
+        currentCamera ===
+        "environment"
+    ) {
+
+        // BACK → FRONT
+
+        currentCamera =
+            "user";
+
+    } else {
+
+        // FRONT → BACK
+
+        currentCamera =
+            "environment";
+
+    }
+
+
+    await startCamera();
+
+}
+
+
+// ============================================================
+// STOP CAMERA
+// ============================================================
+
+function stopCamera() {
+
+    if (!cameraStream) return;
+
+
+    cameraStream
+        .getTracks()
+        .forEach(
+            function (track) {
+
+                track.stop();
+
+            }
+        );
+
+
+    cameraStream = null;
+
+}
+
+
+// ============================================================
+// CAPTURE IMAGE
+// ============================================================
+
+function captureImage() {
+
+    const video =
+        document.getElementById(
+            "camera"
+        );
+
+
+    if (
+        !video ||
+        !cameraStream
+    ) {
+
+        alert(
+            "Please start the camera first."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        video.videoWidth === 0 ||
+        video.videoHeight === 0
+    ) {
+
+        alert(
+            "Camera is not ready yet."
+        );
+
+        return;
+
+    }
+
+
+    const canvas =
+        document.createElement(
+            "canvas"
+        );
+
+
+    canvas.width =
+        video.videoWidth;
+
+
+    canvas.height =
+        video.videoHeight;
+
+
+    const context =
+        canvas.getContext(
+            "2d"
+        );
+
+
+    context.drawImage(
+
+        video,
+
+        0,
+
+        0,
+
+        canvas.width,
+
+        canvas.height
+
+    );
+
+
+    const imageData =
+        canvas.toDataURL(
+            "image/jpeg"
+        );
+
+
+    uploadedImage =
+        new Image();
+
+
+    uploadedImage.onload =
+        function () {
+
+            const preview =
+                document.getElementById(
+                    "previewImage"
+                );
+
+
+            if (preview) {
 
                 preview.src =
-                    event.target.result;
-
+                    imageData;
 
                 preview.style.display =
                     "block";
 
+            }
 
-                runDemoDetection();
-
-            };
-
-
-        reader.readAsDataURL(file);
-
-    }
-);
+        };
 
 
-/* ================= DEMO AI DETECTION ================= */
+    uploadedImage.src =
+        imageData;
 
-function runDemoDetection() {
-
-    /*
-       IMPORTANT:
-       This is demo AI detection.
-       A real trained AI model can be connected later.
-    */
+}
 
 
-    const pests = [
+// ============================================================
+// DETECTION BUTTON
+// ============================================================
 
-        "Aphid",
-        "Whitefly",
-        "Caterpillar",
-        "Leaf Miner",
-        "Thrips"
+function setupDetectionButton() {
 
-    ];
-
-
-    const detected =
-        pests[0];
+    const button =
+        document.getElementById(
+            "detectButton"
+        );
 
 
-    const confidence =
-        94;
+    if (!button) return;
 
 
-    totalDetections++;
-
-    activeThreats++;
-
-
-    pestCounts[detected]++;
-
-
-    updateStatistics();
-
-
-    showDetectionResult(
-        detected,
-        confidence
-    );
-
-
-    addHistory(
-        detected,
-        confidence
-    );
-
-
-    addAlert(
-        detected,
-        confidence
-    );
-
-
-    updateCharts();
-
-
-    sendPestEmail(
-        detected,
-        confidence
+    button.addEventListener(
+        "click",
+        detectPest
     );
 
 }
 
 
-/* ================= RESULT ================= */
+// ============================================================
+// RUN AI DETECTION
+// ============================================================
 
-function showDetectionResult(
-    pest,
-    confidence
-) {
+async function detectPest() {
+
+    if (!uploadedImage) {
+
+        alert(
+            "Please upload or capture an image first."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        !modelLoaded ||
+        !model
+    ) {
+
+        alert(
+            "AI model is not ready yet."
+        );
+
+        return;
+
+    }
+
+
+    showLoading();
+
+
+    try {
+
+        const predictions =
+            await model.predict(
+                uploadedImage
+            );
+
+
+        // Find highest prediction
+        let bestPrediction =
+            predictions[0];
+
+
+        for (
+            let i = 1;
+            i < predictions.length;
+            i++
+        ) {
+
+            if (
+                predictions[i]
+                    .probability
+                >
+                bestPrediction
+                    .probability
+            ) {
+
+                bestPrediction =
+                    predictions[i];
+
+            }
+
+        }
+
+
+        const pestName =
+            bestPrediction.className;
+
+
+        const confidence =
+            (
+                bestPrediction.probability
+                * 100
+            ).toFixed(1);
+
+
+        const result = {
+
+            name:
+                pestName,
+
+            confidence:
+                confidence,
+
+            probability:
+                bestPrediction.probability
+
+        };
+
+
+        displayResult(result);
+
+
+        saveDetection(result);
+
+
+        // Email only for pest
+        if (
+            pestName
+                .toLowerCase()
+                !==
+            "healthy leaf"
+        ) {
+
+            await sendEmailAlert(
+                result
+            );
+
+        }
+
+
+        updateDashboard();
+
+        updateCharts();
+
+    } catch (error) {
+
+        console.error(
+            "Detection error:",
+            error
+        );
+
+
+        alert(
+            "AI detection failed.\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// LOADING DISPLAY
+// ============================================================
+
+function showLoading() {
 
     const pestName =
         document.getElementById(
@@ -445,20 +734,10 @@ function showDetectionResult(
         );
 
 
-    pestName.dataset.pest =
-        pest;
-
-
-    pestName.textContent =
-        getPestDisplayName(
-            pest
+    const confidence =
+        document.getElementById(
+            "confidence"
         );
-
-
-    document.getElementById(
-        "confidence"
-    ).textContent =
-        confidence + "%";
 
 
     const status =
@@ -467,79 +746,198 @@ function showDetectionResult(
         );
 
 
-    status.innerHTML =
-        currentLanguage === "ta"
-            ? translations.ta.pestDetected
-            : translations.en.pestDetected;
+    if (pestName) {
+
+        pestName.textContent =
+            "Analyzing...";
+
+    }
+
+
+    if (confidence) {
+
+        confidence.textContent =
+            "--";
+
+    }
+
+
+    if (status) {
+
+        status.textContent =
+            "AI Processing...";
+
+        status.className =
+            "detection-status";
+
+    }
 
 }
 
 
-/* ================= STATISTICS ================= */
+// ============================================================
+// DISPLAY RESULT
+// ============================================================
 
-function updateStatistics() {
+function displayResult(result) {
 
-    document.getElementById(
-        "totalDetections"
-    ).textContent =
-        totalDetections;
-
-
-    document.getElementById(
-        "activeThreats"
-    ).textContent =
-        activeThreats;
-
-
-    document.getElementById(
-        "emailAlerts"
-    ).textContent =
-        emailAlerts;
-
-}
-
-
-/* ================= EMAIL ================= */
-
-async function sendPestEmail(
-    pest,
-    confidence
-) {
-
-    const emailStatus =
+    const pestName =
         document.getElementById(
-            "emailStatus"
+            "pestName"
         );
 
 
-    emailStatus.textContent =
-        currentLanguage === "ta"
-            ? translations.ta.sending
-            : translations.en.sending;
+    const confidence =
+        document.getElementById(
+            "confidence"
+        );
 
+
+    const status =
+        document.getElementById(
+            "detectionStatus"
+        );
+
+
+    if (pestName) {
+
+        pestName.textContent =
+            result.name;
+
+    }
+
+
+    if (confidence) {
+
+        confidence.textContent =
+            result.confidence + "%";
+
+    }
+
+
+    if (status) {
+
+        const isHealthy =
+            result.name
+                .toLowerCase()
+                ===
+            "healthy leaf";
+
+
+        if (isHealthy) {
+
+            status.textContent =
+                "Healthy Leaf";
+
+            status.className =
+                "detection-status status-safe";
+
+        } else {
+
+            status.textContent =
+                "Pest Detected";
+
+            status.className =
+                "detection-status status-danger";
+
+        }
+
+    }
+
+}
+
+
+// ============================================================
+// SAVE DETECTION
+// ============================================================
+
+function saveDetection(result) {
+
+    const now =
+        new Date();
+
+
+    const item = {
+
+        pest:
+            result.name,
+
+        confidence:
+            result.confidence + "%",
+
+        date:
+            now.toLocaleDateString(),
+
+        time:
+            now.toLocaleTimeString()
+
+    };
+
+
+    detectionHistory.unshift(
+        item
+    );
+
+
+    if (
+        detectionHistory.length
+        >
+        20
+    ) {
+
+        detectionHistory.pop();
+
+    }
+
+
+    totalDetections++;
+
+
+    if (
+        result.name
+            .toLowerCase()
+            !==
+        "healthy leaf"
+    ) {
+
+        activeThreats++;
+
+    }
+
+
+    updateHistory();
+
+    updateAlerts();
+
+}
+
+
+// ============================================================
+// SEND EMAIL ALERT
+// ============================================================
+
+async function sendEmailAlert(
+    result
+) {
 
     try {
 
         await emailjs.send(
 
-            EMAILJS_SERVICE_ID,
+            EMAIL_SERVICE_ID,
 
-            EMAILJS_TEMPLATE_ID,
+            EMAIL_TEMPLATE_ID,
 
             {
 
                 pest_name:
-                    getPestDisplayName(
-                        pest
-                    ),
+                    result.name,
 
                 confidence:
-                    confidence + "%",
+                    result.confidence + "%",
 
                 status:
-                    currentLanguage === "ta"
-                        ? "பூச்சி கண்டறியப்பட்டது"
-                        : "Pest Detected"
+                    "Pest Detected"
 
             }
 
@@ -549,90 +947,168 @@ async function sendPestEmail(
         emailAlerts++;
 
 
-        updateStatistics();
-
-
-        emailStatus.textContent =
-            currentLanguage === "ta"
-                ? translations.ta.emailSent
-                : translations.en.emailSent;
+        console.log(
+            "Email alert sent."
+        );
 
 
     } catch (error) {
 
         console.error(
-            "EmailJS Error:",
+            "Email error:",
             error
         );
-
-
-        emailStatus.textContent =
-            currentLanguage === "ta"
-                ? translations.ta.emailFailed
-                : translations.en.emailFailed;
 
     }
 
 }
 
 
-/* ================= HISTORY ================= */
+// ============================================================
+// DASHBOARD COUNTERS
+// ============================================================
 
-function addHistory(
-    pest,
-    confidence
-) {
+function updateDashboard() {
 
-    const now =
-        new Date();
-
-
-    historyData.unshift({
-
-        date:
-            now.toLocaleString(),
-
-        pest:
-            pest,
-
-        confidence:
-            confidence
-
-    });
+    const total =
+        document.getElementById(
+            "totalDetections"
+        );
 
 
-    renderHistory();
+    const threats =
+        document.getElementById(
+            "activeThreats"
+        );
+
+
+    const emails =
+        document.getElementById(
+            "emailAlerts"
+        );
+
+
+    if (total) {
+
+        total.textContent =
+            totalDetections;
+
+    }
+
+
+    if (threats) {
+
+        threats.textContent =
+            activeThreats;
+
+    }
+
+
+    if (emails) {
+
+        emails.textContent =
+            emailAlerts;
+
+    }
 
 }
 
 
-function renderHistory() {
+// ============================================================
+// HISTORY TABLE
+// ============================================================
 
-    const table =
+function updateHistory() {
+
+    const body =
         document.getElementById(
-            "historyTable"
+            "historyBody"
         );
 
 
-    if (historyData.length === 0) {
+    if (!body) return;
 
-        table.innerHTML = `
 
-            <tr>
+    body.innerHTML = "";
 
-                <td
-                    colspan="4"
-                    class="empty-table">
 
-                    ${
-                        currentLanguage === "ta"
-                            ? "கண்டறிதல் வரலாறு இல்லை"
-                            : "No detection history"
-                    }
+    detectionHistory.forEach(
+        function (item) {
 
+            const row =
+                document.createElement(
+                    "tr"
+                );
+
+
+            row.innerHTML = `
+
+                <td>
+                    ${item.date}
                 </td>
 
-            </tr>
+                <td>
+                    ${item.time}
+                </td>
+
+                <td>
+                    ${item.pest}
+                </td>
+
+                <td>
+                    ${item.confidence}
+                </td>
+
+            `;
+
+
+            body.appendChild(row);
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// ALERTS
+// ============================================================
+
+function updateAlerts() {
+
+    const container =
+        document.getElementById(
+            "alertContainer"
+        );
+
+
+    if (!container) return;
+
+
+    const pestAlerts =
+        detectionHistory.filter(
+            function (item) {
+
+                return (
+                    item.pest
+                        .toLowerCase()
+                    !==
+                    "healthy leaf"
+                );
+
+            }
+        );
+
+
+    if (
+        pestAlerts.length === 0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+                No pest alerts yet.
+            </div>
 
         `;
 
@@ -641,326 +1117,63 @@ function renderHistory() {
     }
 
 
-    table.innerHTML = "";
+    container.innerHTML = "";
 
 
-    historyData.forEach(item => {
+    pestAlerts
+        .slice(0, 5)
+        .forEach(
+            function (item) {
 
-        const row =
-            document.createElement(
-                "tr"
-            );
-
-
-        row.innerHTML = `
-
-            <td>
-                ${item.date}
-            </td>
-
-            <td>
-                ${getPestDisplayName(item.pest)}
-            </td>
-
-            <td>
-                ${item.confidence}%
-            </td>
-
-            <td>
-
-                <span class="status-badge">
-
-                    ${
-                        currentLanguage === "ta"
-                            ? translations.ta.detected
-                            : translations.en.detected
-                    }
-
-                </span>
-
-            </td>
-
-        `;
+                const div =
+                    document.createElement(
+                        "div"
+                    );
 
 
-        table.appendChild(row);
-
-    });
-
-}
+                div.className =
+                    "alert-card";
 
 
-/* ================= ALERTS ================= */
+                div.innerHTML = `
 
-function addAlert(
-    pest,
-    confidence
-) {
+                    <strong>
+                        ⚠️ ${item.pest}
+                    </strong>
 
-    const alertsList =
-        document.getElementById(
-            "alertsList"
-        );
+                    <span>
+                        Confidence:
+                        ${item.confidence}
+                    </span>
 
+                    <small>
+                        ${item.date}
+                        ${item.time}
+                    </small>
 
-    const empty =
-        alertsList.querySelector(
-            ".empty-state"
-        );
-
-
-    if (empty) {
-        empty.remove();
-    }
+                `;
 
 
-    const alert =
-        document.createElement(
-            "div"
-        );
+                container.appendChild(
+                    div
+                );
 
-
-    alert.className =
-        "alert-item";
-
-
-    alert.dataset.pest =
-        pest;
-
-
-    alert.dataset.confidence =
-        confidence;
-
-
-    alert.innerHTML = `
-
-        <strong>
-
-            🚨
-            ${getPestDisplayName(pest)}
-
-        </strong>
-
-        <small>
-
-            ${
-                currentLanguage === "ta"
-                    ? "நம்பகத்தன்மை"
-                    : "Confidence"
             }
-
-            :
-
-            ${confidence}%
-
-        </small>
-
-    `;
-
-
-    alertsList.prepend(
-        alert
-    );
+        );
 
 }
 
 
-/* ================= UPDATE ALERT LANGUAGE ================= */
+// ============================================================
+// CHARTS
+// ============================================================
 
-function updateAlertsLanguage() {
+let pestChart = null;
 
-    const alerts =
-        document.querySelectorAll(
-            ".alert-item"
-        );
+let trendChart = null;
 
 
-    alerts.forEach(alert => {
-
-        const pest =
-            alert.dataset.pest;
-
-
-        const confidence =
-            alert.dataset.confidence;
-
-
-        alert.innerHTML = `
-
-            <strong>
-
-                🚨
-                ${getPestDisplayName(pest)}
-
-            </strong>
-
-            <small>
-
-                ${
-                    currentLanguage === "ta"
-                        ? "நம்பகத்தன்மை"
-                        : "Confidence"
-                }
-
-                :
-
-                ${confidence}%
-
-            </small>
-
-        `;
-
-    });
-
-}
-
-
-/* ================= CAMERA ================= */
-
-const openCameraBtn =
-    document.getElementById(
-        "openCameraBtn"
-    );
-
-
-const captureBtn =
-    document.getElementById(
-        "captureBtn"
-    );
-
-
-const camera =
-    document.getElementById(
-        "camera"
-    );
-
-
-const canvas =
-    document.getElementById(
-        "canvas"
-    );
-
-
-openCameraBtn.addEventListener(
-    "click",
-    async function () {
-
-        try {
-
-            cameraStream =
-                await navigator.mediaDevices
-                    .getUserMedia({
-                        video: true
-                    });
-
-
-            camera.srcObject =
-                cameraStream;
-
-
-            camera.style.display =
-                "block";
-
-
-            captureBtn.disabled =
-                false;
-
-
-        } catch (error) {
-
-            console.error(
-                "Camera Error:",
-                error
-            );
-
-
-            alert(
-
-                currentLanguage === "ta"
-
-                    ? "கேமராவை திறக்க முடியவில்லை."
-
-                    : "Unable to open camera."
-
-            );
-
-        }
-
-    }
-);
-
-
-/* ================= CAPTURE ================= */
-
-captureBtn.addEventListener(
-    "click",
-    function () {
-
-        if (!cameraStream) {
-            return;
-        }
-
-
-        canvas.width =
-            camera.videoWidth;
-
-
-        canvas.height =
-            camera.videoHeight;
-
-
-        const context =
-            canvas.getContext(
-                "2d"
-            );
-
-
-        context.drawImage(
-
-            camera,
-
-            0,
-            0,
-
-            canvas.width,
-            canvas.height
-
-        );
-
-
-        const image =
-            canvas.toDataURL(
-                "image/png"
-            );
-
-
-        const preview =
-            document.getElementById(
-                "previewImage"
-            );
-
-
-        preview.src =
-            image;
-
-
-        preview.style.display =
-            "block";
-
-
-        runDemoDetection();
-
-    }
-);
-
-
-/* ================= CHARTS ================= */
-
-let pestChart;
-let trendChart;
-
-
-function createCharts() {
+function updateCharts() {
 
     const pestCanvas =
         document.getElementById(
@@ -974,6 +1187,62 @@ function createCharts() {
         );
 
 
+    if (
+        !pestCanvas ||
+        !trendCanvas
+    ) {
+
+        return;
+
+    }
+
+
+    const counts = {};
+
+
+    detectionHistory.forEach(
+        function (item) {
+
+            if (
+                item.pest
+                    .toLowerCase()
+                !==
+                "healthy leaf"
+            ) {
+
+                if (
+                    !counts[item.pest]
+                ) {
+
+                    counts[item.pest] =
+                        0;
+
+                }
+
+
+                counts[item.pest]++;
+
+            }
+
+        }
+    );
+
+
+    const labels =
+        Object.keys(counts);
+
+
+    const values =
+        Object.values(counts);
+
+
+    if (pestChart) {
+
+        pestChart.destroy();
+
+    }
+
+
     pestChart =
         new Chart(
 
@@ -985,34 +1254,18 @@ function createCharts() {
 
                 data: {
 
-                    labels: [
+                    labels:
+                        labels,
 
-                        "Aphid",
-                        "Whitefly",
-                        "Caterpillar",
-                        "Leaf Miner",
-                        "Thrips"
+                    datasets: [{
 
-                    ],
+                        label:
+                            "Pest Detections",
 
-                    datasets: [
+                        data:
+                            values
 
-                        {
-
-                            label:
-                                "Detections",
-
-                            data: [
-                                0,
-                                0,
-                                0,
-                                0,
-                                0
-                            ]
-
-                        }
-
-                    ]
+                    }]
 
                 },
 
@@ -1020,19 +1273,52 @@ function createCharts() {
 
                     responsive: true,
 
-                    plugins: {
-
-                        legend: {
-                            display: false
-                        }
-
-                    }
+                    maintainAspectRatio:
+                        false
 
                 }
 
             }
 
         );
+
+
+    // Trend chart
+
+    const trendLabels =
+        detectionHistory
+            .slice()
+            .reverse()
+            .map(
+                function (item) {
+
+                    return item.time;
+
+                }
+            );
+
+
+    const trendValues =
+        detectionHistory
+            .slice()
+            .reverse()
+            .map(
+                function (
+                    item,
+                    index
+                ) {
+
+                    return index + 1;
+
+                }
+            );
+
+
+    if (trendChart) {
+
+        trendChart.destroy();
+
+    }
 
 
     trendChart =
@@ -1046,43 +1332,31 @@ function createCharts() {
 
                 data: {
 
-                    labels: [
+                    labels:
+                        trendLabels,
 
-                        "Day 1",
-                        "Day 2",
-                        "Day 3",
-                        "Day 4",
-                        "Day 5",
-                        "Today"
+                    datasets: [{
 
-                    ],
+                        label:
+                            "Detection Trend",
 
-                    datasets: [
+                        data:
+                            trendValues,
 
-                        {
+                        tension:
+                            0.3
 
-                            label:
-                                "Detections",
-
-                            data: [
-                                2,
-                                3,
-                                1,
-                                4,
-                                2,
-                                0
-                            ],
-
-                            tension: 0.3
-
-                        }
-
-                    ]
+                    }]
 
                 },
 
                 options: {
-                    responsive: true
+
+                    responsive: true,
+
+                    maintainAspectRatio:
+                        false
+
                 }
 
             }
@@ -1092,105 +1366,248 @@ function createCharts() {
 }
 
 
-/* ================= UPDATE CHARTS ================= */
+// ============================================================
+// SENSOR DISPLAY
+// ============================================================
 
-function updateCharts() {
-
-    if (!pestChart) {
-        return;
-    }
-
-
-    pestChart.data.datasets[0].data = [
-
-        pestCounts.Aphid,
-
-        pestCounts.Whitefly,
-
-        pestCounts.Caterpillar,
-
-        pestCounts["Leaf Miner"],
-
-        pestCounts.Thrips
-
-    ];
-
-
-    pestChart.update();
-
-
-    trendChart.data.datasets[0].data[5] =
-        totalDetections;
-
-
-    trendChart.update();
-
-}
-
-
-/* ================= SENSOR DEMO ================= */
-
-function updateSensors() {
-
-    const distance =
-        Math.floor(
-            Math.random() * 20
-        ) + 15;
-
-
-    document.getElementById(
-        "distanceValue"
-    ).textContent =
-        distance + " cm";
-
+function updateSensorDisplay() {
 
     const temperature =
-        Math.floor(
-            Math.random() * 5
-        ) + 27;
-
-
-    document.getElementById(
-        "temperatureValue"
-    ).textContent =
-        temperature + "°C";
+        document.getElementById(
+            "temperature"
+        );
 
 
     const humidity =
-        Math.floor(
-            Math.random() * 15
-        ) + 60;
+        document.getElementById(
+            "humidity"
+        );
 
 
-    document.getElementById(
-        "humidityValue"
-    ).textContent =
-        humidity + "%";
+    const distance =
+        document.getElementById(
+            "distance"
+        );
+
+
+    const irStatus =
+        document.getElementById(
+            "irStatus"
+        );
+
+
+    if (temperature) {
+
+        temperature.textContent =
+            "-- °C";
+
+    }
+
+
+    if (humidity) {
+
+        humidity.textContent =
+            "-- %";
+
+    }
+
+
+    if (distance) {
+
+        distance.textContent =
+            "-- cm";
+
+    }
+
+
+    if (irStatus) {
+
+        irStatus.textContent =
+            "Waiting";
+
+    }
 
 }
 
 
-/* ================= START ================= */
+// ============================================================
+// LANGUAGE
+// ============================================================
 
-document.addEventListener(
-    "DOMContentLoaded",
+const translations = {
+
+    en: {
+
+        dashboard:
+            "Dashboard",
+
+        aiDetection:
+            "AI Detection",
+
+        analytics:
+            "Analytics",
+
+        sensors:
+            "Sensors",
+
+        alerts:
+            "Alerts",
+
+        history:
+            "History"
+
+    },
+
+
+    ta: {
+
+        dashboard:
+            "டாஷ்போர்டு",
+
+        aiDetection:
+            "AI கண்டறிதல்",
+
+        analytics:
+            "பகுப்பாய்வு",
+
+        sensors:
+            "சென்சார்கள்",
+
+        alerts:
+            "எச்சரிக்கைகள்",
+
+        history:
+            "வரலாறு"
+
+    }
+
+};
+
+
+// ============================================================
+// LANGUAGE SETUP
+// ============================================================
+
+function setupLanguage() {
+
+    const selector =
+        document.getElementById(
+            "languageSelector"
+        );
+
+
+    if (!selector) return;
+
+
+    selector.addEventListener(
+        "change",
+        function () {
+
+            changeLanguage(
+                selector.value
+            );
+
+        }
+    );
+
+}
+
+
+function changeLanguage(
+    language
+) {
+
+    const elements =
+        document.querySelectorAll(
+            "[data-i18n]"
+        );
+
+
+    elements.forEach(
+        function (element) {
+
+            const key =
+                element.getAttribute(
+                    "data-i18n"
+                );
+
+
+            if (
+                translations[language] &&
+                translations[language][key]
+            ) {
+
+                element.textContent =
+                    translations[language][key];
+
+            }
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+function setupNavigation() {
+
+    const links =
+        document.querySelectorAll(
+            ".nav-link"
+        );
+
+
+    links.forEach(
+        function (link) {
+
+            link.addEventListener(
+                "click",
+                function () {
+
+                    const target =
+                        link.getAttribute(
+                            "data-target"
+                        );
+
+
+                    const section =
+                        document.getElementById(
+                            target
+                        );
+
+
+                    if (section) {
+
+                        section.scrollIntoView({
+
+                            behavior:
+                                "smooth"
+
+                        });
+
+                    }
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// CLEANUP CAMERA
+// ============================================================
+
+window.addEventListener(
+    "beforeunload",
     function () {
 
-        changeLanguage("en");
-
-        createCharts();
-
-        updateStatistics();
-
-        setInterval(
-            updateSensors,
-            3000
-        );
-
-        setInterval(
-            updateCharts,
-            1000
-        );
+        stopCamera();
 
     }
 );
