@@ -1,527 +1,682 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <title>AI Smart Pest Detection - Team 16</title>
+  <title>AI Smart Pest Detection | Team 16</title>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
 
-    <!-- TensorFlow.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Teachable Machine -->
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
-    <!-- EmailJS -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- Teachable Machine -->
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 
-    <link rel="stylesheet" href="style.css">
+  <!-- EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 
 <body>
 
-    <!-- ================= SIDEBAR ================= -->
+  <div class="app">
 
+    <!-- ================= SIDEBAR ================= -->
     <aside class="sidebar">
 
-        <div class="logo">
-            <div class="logo-icon">🌱</div>
-            <div>
-                <h2>Smart Pest AI</h2>
-                <p>Team 16</p>
-            </div>
+      <div class="brand">
+        <div class="brand-icon">🌱</div>
+        <div>
+          <h2>AgriGuard AI</h2>
+          <p>Team 16</p>
         </div>
+      </div>
 
-        <nav class="navigation">
+      <nav class="nav-menu">
 
-            <a href="#dashboard" class="nav-link active" data-target="dashboard">
-                🏠 Dashboard
-            </a>
+        <button class="nav-item active" data-target="dashboard">
+          <span>🏠</span>
+          Dashboard
+        </button>
 
-            <a href="#aiDetection" class="nav-link" data-target="aiDetection">
-                🤖 AI Detection
-            </a>
+        <button class="nav-item" data-target="aiDetection">
+          <span>🤖</span>
+          AI Detection
+        </button>
 
-            <a href="#analytics" class="nav-link" data-target="analytics">
-                📊 Analytics
-            </a>
+        <button class="nav-item" data-target="analytics">
+          <span>📊</span>
+          Analytics
+        </button>
 
-            <a href="#sensors" class="nav-link" data-target="sensors">
-                🌡️ Sensors
-            </a>
+        <button class="nav-item" data-target="sensors">
+          <span>🌡️</span>
+          Sensors
+        </button>
 
-            <a href="#alerts" class="nav-link" data-target="alerts">
-                🚨 Alerts
-            </a>
+        <button class="nav-item" data-target="alerts">
+          <span>🔔</span>
+          Alerts
+        </button>
 
-            <a href="#history" class="nav-link" data-target="history">
-                📜 History
-            </a>
+        <button class="nav-item" data-target="history">
+          <span>🕘</span>
+          History
+        </button>
 
-        </nav>
+      </nav>
 
-        <div class="sidebar-footer">
-            <p>AI Smart Pest Detection</p>
-            <span>Team 16 • 2026</span>
+      <div class="sidebar-bottom">
+        <div class="team-card">
+          <strong>Team 16</strong>
+          <p>AI Smart Agriculture</p>
+          <small>ESP32 + AI Vision</small>
         </div>
+      </div>
 
     </aside>
 
 
-    <!-- ================= MAIN CONTENT ================= -->
-
+    <!-- ================= MAIN ================= -->
     <main class="main-content">
 
-        <!-- HEADER -->
+      <!-- HEADER -->
+      <header class="topbar">
 
-        <header class="top-header">
+        <div>
+          <p class="eyebrow">SMART AGRICULTURE SYSTEM</p>
+          <h1>AI Smart Pest Detection</h1>
+        </div>
 
-            <div>
-                <h1>AI Smart Pest Detection & Alert System</h1>
-                <p>AI-powered crop monitoring dashboard</p>
-            </div>
+        <div class="topbar-right">
 
-            <div class="header-right">
+          <select id="languageSelector">
+            <option value="en">English</option>
+            <option value="ta">தமிழ்</option>
+          </select>
 
-                <select id="languageSelector">
-                    <option value="en">English</option>
-                    <option value="ta">தமிழ்</option>
-                </select>
+          <div class="model-badge">
+            <span class="status-dot"></span>
+            <span id="modelStatus">Loading AI Model...</span>
+          </div>
 
-                <span id="modelStatus" class="model-status">
-                    Loading AI Model...
-                </span>
+        </div>
 
-            </div>
+      </header>
 
-        </header>
 
+      <!-- ================= DASHBOARD ================= -->
+      <section id="dashboard" class="page-section">
 
-        <!-- ================= DASHBOARD ================= -->
+        <div class="hero">
 
-        <section id="dashboard" class="dashboard-section section-card">
+          <div class="hero-content">
 
-            <div class="section-heading">
-                <div>
-                    <span class="section-tag">OVERVIEW</span>
-                    <h2>Dashboard</h2>
-                    <p>Smart crop monitoring at a glance.</p>
-                </div>
-            </div>
+            <span class="hero-tag">AI POWERED CROP PROTECTION</span>
 
-            <div class="stats-grid">
-
-                <div class="stat-card">
-                    <div class="stat-icon">🔍</div>
-                    <div>
-                        <p>Total Detections</p>
-                        <h3 id="totalDetections">0</h3>
-                    </div>
-                </div>
-
-                <div class="stat-card danger-card">
-                    <div class="stat-icon">🐛</div>
-                    <div>
-                        <p>Active Threats</p>
-                        <h3 id="activeThreats">0</h3>
-                    </div>
-                </div>
-
-                <div class="stat-card email-card">
-                    <div class="stat-icon">📧</div>
-                    <div>
-                        <p>Email Alerts</p>
-                        <h3 id="emailAlerts">0</h3>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="welcome-card">
-
-                <div>
-                    <span class="section-tag">TEAM 16</span>
-
-                    <h2>AI-powered pest detection for smart farming</h2>
-
-                    <p>
-                        Upload a crop image or use your camera to detect
-                        common pests using the trained AI model.
-                    </p>
-                </div>
-
-                <div class="welcome-icon">
-                    🌾
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================= AI DETECTION ================= -->
-
-        <section id="aiDetection" class="content-section section-card">
-
-            <div class="section-heading">
-
-                <div>
-                    <span class="section-tag">AI SYSTEM</span>
-                    <h2>AI Detection</h2>
-                    <p>Capture or upload a crop image for pest detection.</p>
-                </div>
-
-            </div>
-
-
-            <div class="detection-grid">
-
-                <!-- CAMERA -->
-
-                <div class="panel">
-
-                    <div class="panel-title">
-                        <h3>📷 Camera Detection</h3>
-                    </div>
-
-                    <video
-                        id="camera"
-                        autoplay
-                        playsinline
-                        muted>
-                    </video>
-
-                    <div class="button-row">
-
-                        <button id="startCamera" class="primary-btn">
-                            ▶ Start Camera
-                        </button>
-
-                        <button id="switchCamera" class="secondary-btn">
-                            🔄 Switch Camera
-                        </button>
-
-                        <button id="captureImage" class="success-btn">
-                            📸 Capture & Detect
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <!-- UPLOAD -->
-
-                <div class="panel">
-
-                    <div class="panel-title">
-                        <h3>🖼️ Upload Image</h3>
-                    </div>
-
-                    <label class="upload-box">
-
-                        <span class="upload-icon">📁</span>
-
-                        <strong>Choose crop image</strong>
-
-                        <small>
-                            JPG, PNG or JPEG
-                        </small>
-
-                        <input
-                            type="file"
-                            id="imageInput"
-                            accept="image/*">
-
-                    </label>
-
-                    <div class="preview-area">
-
-                        <img
-                            id="previewImage"
-                            alt="Selected crop image">
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- RESULT -->
-
-            <div class="result-card">
-
-                <div class="result-header">
-                    <h3>🧠 AI Detection Result</h3>
-                </div>
-
-                <div class="result-main">
-
-                    <div class="result-item">
-
-                        <span>Detected Pest</span>
-
-                        <strong id="pestName">
-                            —
-                        </strong>
-
-                    </div>
-
-                    <div class="result-item">
-
-                        <span>Confidence</span>
-
-                        <strong id="confidence">
-                            —
-                        </strong>
-
-                    </div>
-
-                    <div class="result-item">
-
-                        <span>Status</span>
-
-                        <strong id="detectionStatus">
-                            Waiting for detection
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- EMAIL -->
-
-            <div class="email-panel">
-
-                <div>
-                    <span class="section-tag">ALERT SYSTEM</span>
-
-                    <h3>📧 Demo Email Alert</h3>
-
-                    <p>
-                        Enter an email address to receive pest alerts.
-                    </p>
-                </div>
-
-                <div class="email-form">
-
-                    <input
-                        type="email"
-                        id="alertEmail"
-                        placeholder="Enter email address">
-
-                    <button
-                        id="saveEmail"
-                        class="primary-btn">
-                        Save Email
-                    </button>
-
-                </div>
-
-                <p
-                    id="emailStatus"
-                    class="email-status">
-                    No email saved.
-                </p>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================= ANALYTICS ================= -->
-
-        <section id="analytics" class="content-section section-card">
-
-            <div class="section-heading">
-
-                <div>
-                    <span class="section-tag">DATA</span>
-                    <h2>Analytics</h2>
-                    <p>View pest detection and confidence trends.</p>
-                </div>
-
-            </div>
-
-            <div class="charts-grid">
-
-                <div class="chart-panel">
-
-                    <h3>Pest Detection Count</h3>
-
-                    <div class="chart-container">
-                        <canvas id="pestChart"></canvas>
-                    </div>
-
-                </div>
-
-                <div class="chart-panel">
-
-                    <h3>Confidence Trend</h3>
-
-                    <div class="chart-container">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================= SENSORS ================= -->
-
-        <section id="sensors" class="content-section section-card">
-
-            <div class="section-heading">
-
-                <div>
-                    <span class="section-tag">HARDWARE</span>
-                    <h2>Sensors</h2>
-                    <p>ESP32 sensor monitoring panel.</p>
-                </div>
-
-            </div>
-
-            <div class="sensor-grid">
-
-                <div class="sensor-card">
-                    <span>🌡️</span>
-                    <p>Temperature</p>
-                    <strong id="temperature">--</strong>
-                    <small>°C</small>
-                </div>
-
-                <div class="sensor-card">
-                    <span>💧</span>
-                    <p>Humidity</p>
-                    <strong id="humidity">--</strong>
-                    <small>%</small>
-                </div>
-
-                <div class="sensor-card">
-                    <span>📏</span>
-                    <p>Distance</p>
-                    <strong id="distance">--</strong>
-                    <small>cm</small>
-                </div>
-
-                <div class="sensor-card">
-                    <span>🔴</span>
-                    <p>IR Status</p>
-                    <strong id="irStatus">--</strong>
-                </div>
-
-            </div>
-
-            <div class="hardware-note">
-                <strong>Hardware connection:</strong>
-                Sensor values will be connected to the ESP32 hardware later.
-            </div>
-
-        </section>
-
-
-        <!-- ================= ALERTS ================= -->
-
-        <section id="alerts" class="content-section section-card">
-
-            <div class="section-heading">
-
-                <div>
-                    <span class="section-tag">NOTIFICATIONS</span>
-                    <h2>Alerts</h2>
-                    <p>Recent pest detection alerts.</p>
-                </div>
-
-            </div>
-
-            <div
-                id="alertContainer"
-                class="alerts-container">
-
-                <div class="empty-state">
-                    <span>🔔</span>
-                    <p>No pest alerts yet.</p>
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================= HISTORY ================= -->
-
-        <section id="history" class="content-section section-card">
-
-            <div class="section-heading">
-
-                <div>
-                    <span class="section-tag">RECORDS</span>
-                    <h2>Detection History</h2>
-                    <p>Previous AI detection results.</p>
-                </div>
-
-            </div>
-
-            <div class="table-wrapper">
-
-                <table>
-
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Detection</th>
-                            <th>Confidence</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="historyBody">
-
-                        <tr>
-                            <td colspan="4">
-                                No detections yet.
-                            </td>
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </section>
-
-
-        <!-- FOOTER -->
-
-        <footer>
+            <h2>
+              Detect crop pests
+              <span>before they spread.</span>
+            </h2>
 
             <p>
-                AI Smart Pest Detection & Alert System
+              Upload a crop image or use your camera.
+              Our AI model identifies common agricultural pests
+              and helps you respond quickly.
             </p>
 
-            <span>
-                Team 16 • Gowshika P • Indumala R • Gokulapriyan V
-            </span>
+            <div class="hero-actions">
+              <button class="primary-btn" data-target="aiDetection">
+                Start AI Detection →
+              </button>
 
-        </footer>
+              <button class="secondary-btn" data-target="sensors">
+                View Sensors
+              </button>
+            </div>
+
+          </div>
+
+          <div class="hero-visual">
+            <div class="crop-circle">
+              🌾
+            </div>
+
+            <div class="floating-card card-one">
+              <span>🤖</span>
+              <div>
+                <strong>AI Vision</strong>
+                <small>Active</small>
+              </div>
+            </div>
+
+            <div class="floating-card card-two">
+              <span>🛡️</span>
+              <div>
+                <strong>Crop Safety</strong>
+                <small>Monitoring</small>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- STATS -->
+        <div class="stats-grid">
+
+          <div class="stat-card">
+            <div class="stat-icon blue">🔍</div>
+            <div>
+              <p>Total Detections</p>
+              <h3 id="totalDetections">0</h3>
+              <small>AI image analyses</small>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon red">⚠️</div>
+            <div>
+              <p>Active Threats</p>
+              <h3 id="activeThreats">0</h3>
+              <small>Pests detected</small>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">✉️</div>
+            <div>
+              <p>Email Alerts</p>
+              <h3 id="emailAlerts">0</h3>
+              <small>Successfully sent</small>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">🧠</div>
+            <div>
+              <p>AI Classes</p>
+              <h3>5</h3>
+              <small>Trained categories</small>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- QUICK STATUS -->
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SYSTEM OVERVIEW</p>
+            <h2>Quick Status</h2>
+          </div>
+        </div>
+
+        <div class="quick-grid">
+
+          <div class="quick-card">
+            <span class="quick-icon">🤖</span>
+            <div>
+              <strong>AI Model</strong>
+              <p id="quickModelStatus">Checking...</p>
+            </div>
+          </div>
+
+          <div class="quick-card">
+            <span class="quick-icon">📷</span>
+            <div>
+              <strong>Camera</strong>
+              <p>Ready for detection</p>
+            </div>
+          </div>
+
+          <div class="quick-card">
+            <span class="quick-icon">📧</span>
+            <div>
+              <strong>Email System</strong>
+              <p id="quickEmailStatus">Checking...</p>
+            </div>
+          </div>
+
+          <div class="quick-card">
+            <span class="quick-icon">🔌</span>
+            <div>
+              <strong>Hardware</strong>
+              <p>Sensor integration pending</p>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= AI DETECTION ================= -->
+      <section id="aiDetection" class="page-section">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ARTIFICIAL INTELLIGENCE</p>
+            <h2>AI Pest Detection</h2>
+            <p>Use your camera or upload a crop image.</p>
+          </div>
+        </div>
+
+
+        <div class="detection-layout">
+
+          <!-- CAMERA -->
+          <div class="panel camera-panel">
+
+            <div class="panel-header">
+              <div>
+                <h3>📷 Camera Detection</h3>
+                <p>Capture a crop image directly.</p>
+              </div>
+
+              <span class="live-badge">● READY</span>
+            </div>
+
+            <div class="camera-box">
+
+              <video id="camera" autoplay playsinline></video>
+
+              <div class="camera-placeholder" id="cameraPlaceholder">
+                <span>📷</span>
+                <p>Camera preview</p>
+              </div>
+
+            </div>
+
+            <div class="camera-buttons">
+
+              <button id="startCamera" class="primary-btn">
+                Start Camera
+              </button>
+
+              <button id="switchCamera" class="secondary-btn">
+                Switch
+              </button>
+
+              <button id="captureImage" class="secondary-btn">
+                Capture & Detect
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- UPLOAD -->
+          <div class="panel upload-panel">
+
+            <div class="panel-header">
+              <div>
+                <h3>🖼️ Image Upload</h3>
+                <p>Upload a crop image for AI analysis.</p>
+              </div>
+            </div>
+
+            <label class="upload-area" for="imageInput">
+
+              <div class="upload-icon">☁️</div>
+
+              <strong>Choose crop image</strong>
+
+              <span>
+                JPG, PNG or WEBP
+              </span>
+
+              <input
+                type="file"
+                id="imageInput"
+                accept="image/*"
+              />
+
+            </label>
+
+            <div class="preview-box">
+              <img id="previewImage" alt="Crop Preview" />
+              <p id="previewText">No image selected</p>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- RESULT -->
+        <div class="panel result-panel">
+
+          <div class="panel-header">
+            <div>
+              <h3>🔎 Detection Result</h3>
+              <p>AI classification result and confidence scores.</p>
+            </div>
+          </div>
+
+          <div class="result-main">
+
+            <div class="result-primary">
+
+              <span class="result-label">Detected Class</span>
+
+              <h2 id="pestName">Waiting for image...</h2>
+
+              <div class="confidence">
+                <span>Confidence</span>
+                <strong id="confidence">0%</strong>
+              </div>
+
+              <div class="confidence-bar">
+                <div id="confidenceFill"></div>
+              </div>
+
+              <div id="detectionStatus" class="result-status neutral">
+                No detection yet
+              </div>
+
+            </div>
+
+
+            <div class="prediction-list" id="predictionList">
+
+              <div class="prediction-empty">
+                AI prediction scores will appear here.
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- EMAIL -->
+        <div class="panel email-panel">
+
+          <div class="email-info">
+            <span class="email-icon">📧</span>
+
+            <div>
+              <h3>Email Alert Setup</h3>
+              <p>
+                Enter an email address to receive an alert
+                when a pest is detected.
+              </p>
+            </div>
+          </div>
+
+          <div class="email-form">
+
+            <input
+              type="email"
+              id="alertEmail"
+              placeholder="Enter email address"
+            />
+
+            <button id="saveEmail" class="primary-btn">
+              Save Email
+            </button>
+
+          </div>
+
+          <p id="emailStatus" class="email-status"></p>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= ANALYTICS ================= -->
+      <section id="analytics" class="page-section">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">DATA INSIGHTS</p>
+            <h2>Analytics</h2>
+            <p>Visual summary of AI detection activity.</p>
+          </div>
+        </div>
+
+        <div class="chart-grid">
+
+          <div class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Pest Detection Distribution</h3>
+                <p>Detected pest classes</p>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <canvas id="pestChart"></canvas>
+            </div>
+          </div>
+
+
+          <div class="panel chart-panel">
+            <div class="panel-header">
+              <div>
+                <h3>Detection Trend</h3>
+                <p>Recent AI detections</p>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= SENSORS ================= -->
+      <section id="sensors" class="page-section">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ESP32 SENSOR NETWORK</p>
+            <h2>Field Sensors</h2>
+            <p>
+              Hardware readings will appear here after sensor connection.
+            </p>
+          </div>
+
+          <span class="hardware-status">
+            HARDWARE NOT CONNECTED
+          </span>
+        </div>
+
+
+        <div class="sensor-grid">
+
+          <div class="sensor-card">
+            <div class="sensor-top">
+              <span>🌡️</span>
+              <small>DHT11</small>
+            </div>
+
+            <h3 id="temperature">-- °C</h3>
+            <p>Temperature</p>
+
+            <div class="sensor-note">
+              Waiting for ESP32
+            </div>
+          </div>
+
+
+          <div class="sensor-card">
+            <div class="sensor-top">
+              <span>💧</span>
+              <small>DHT11</small>
+            </div>
+
+            <h3 id="humidity">-- %</h3>
+            <p>Humidity</p>
+
+            <div class="sensor-note">
+              Waiting for ESP32
+            </div>
+          </div>
+
+
+          <div class="sensor-card">
+            <div class="sensor-top">
+              <span>📏</span>
+              <small>ULTRASONIC</small>
+            </div>
+
+            <h3 id="distance">-- cm</h3>
+            <p>Distance</p>
+
+            <div class="sensor-note">
+              Sensor integration pending
+            </div>
+          </div>
+
+
+          <div class="sensor-card">
+            <div class="sensor-top">
+              <span>🔴</span>
+              <small>IR SENSOR</small>
+            </div>
+
+            <h3 id="irStatus">--</h3>
+            <p>IR Status</p>
+
+            <div class="sensor-note">
+              Sensor integration pending
+            </div>
+          </div>
+
+        </div>
+
+
+        <div class="hardware-note">
+
+          <div class="hardware-note-icon">🔧</div>
+
+          <div>
+            <h3>Hardware Integration</h3>
+
+            <p>
+              Current sensor cards are placeholders.
+              They will show real values only after the ESP32
+              and sensors are physically connected and programmed.
+            </p>
+
+            <strong>
+              DHT11 planned connection: VCC → 3.3V | GND → GND | DATA → GPIO 4
+            </strong>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= ALERTS ================= -->
+      <section id="alerts" class="page-section">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">NOTIFICATIONS</p>
+            <h2>Alerts</h2>
+            <p>Recent pest detection alerts.</p>
+          </div>
+        </div>
+
+        <div id="alertContainer" class="alert-container">
+
+          <div class="empty-state">
+            <span>🔔</span>
+            <h3>No alerts yet</h3>
+            <p>
+              Pest detection alerts will appear here.
+            </p>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= HISTORY ================= -->
+      <section id="history" class="page-section">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">ACTIVITY LOG</p>
+            <h2>Detection History</h2>
+            <p>Previous AI detection results.</p>
+          </div>
+        </div>
+
+        <div class="panel history-panel">
+
+          <div class="table-wrapper">
+
+            <table>
+
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Detection</th>
+                  <th>Confidence</th>
+                  <th>Status</th>
+                  <th>Email</th>
+                </tr>
+              </thead>
+
+              <tbody id="historyBody">
+
+                <tr>
+                  <td colspan="5" class="empty-table">
+                    No detection history yet.
+                  </td>
+                </tr>
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- FOOTER -->
+      <footer>
+
+        <div>
+          <strong>AI Smart Pest Detection & Alert System</strong>
+          <p>Team 16 • Smart Agriculture Project</p>
+        </div>
+
+        <div class="footer-members">
+          <span>Gowshika P</span>
+          <span>Indumala R</span>
+          <span>Gokulapriyan V</span>
+        </div>
+
+      </footer>
 
     </main>
 
+  </div>
 
-    <!-- SCRIPT -->
 
-    <script src="script.js?v=20260927-8"></script>
+  <script src="script.js?v=20260927-10"></script>
 
 </body>
 </html>
