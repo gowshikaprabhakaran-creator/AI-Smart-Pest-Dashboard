@@ -33,208 +33,359 @@ let pestAlerts = 0;
 let emailAlerts = 0;
 
 let pestChart = null;
-let confidenceChart = null;
+let trendChart = null;
 
 let currentLanguage = "en";
 
-/* =========================
+
+/* =========================================================
    DOM READY
-   ========================= */
+   ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+
     console.log("Dashboard loaded.");
 
     initializeEmailJS();
+
     setupEmail();
+
     setupNavigation();
+
     setupCamera();
+
     setupUpload();
+
     setupLanguage();
-    setupCharts();
+
     loadHistory();
+
     updateDashboard();
 
+    setupCharts();
+
     loadModel();
+
 });
+
 
 /* =========================================================
    EMAILJS
    ========================================================= */
 
 function initializeEmailJS() {
-    try {
-        if (typeof emailjs !== "undefined") {
-            emailjs.init({
-                publicKey: EMAIL_PUBLIC_KEY
-            });
 
-            console.log("EmailJS initialized successfully.");
-        } else {
-            console.error("EmailJS library not loaded.");
+    try {
+
+        if (typeof emailjs === "undefined") {
+
+            console.error(
+                "EmailJS library not loaded."
+            );
+
+            showEmailMessage(
+                "❌ EmailJS library not loaded."
+            );
+
+            return;
         }
+
+        emailjs.init({
+            publicKey: EMAIL_PUBLIC_KEY
+        });
+
+        console.log(
+            "EmailJS initialized successfully."
+        );
+
     } catch (error) {
-        console.error("EmailJS initialization error:", error);
+
+        console.error(
+            "EmailJS initialization error:",
+            error
+        );
+
     }
 }
 
-/* =========================
+
+/* =========================================================
    DEMO EMAIL SETUP
-   ========================= */
+   ========================================================= */
 
 function setupEmail() {
-    const emailInput = document.getElementById("alertEmail");
-    const saveButton = document.getElementById("saveEmail");
+
+    const emailInput =
+        document.getElementById("alertEmail");
+
+    const saveButton =
+        document.getElementById("saveEmail");
+
 
     if (!emailInput || !saveButton) {
-        console.log("Demo email elements not found.");
+
+        console.log(
+            "Demo email elements not found."
+        );
+
         return;
     }
 
-    const savedEmail = localStorage.getItem("demoAlertEmail");
+
+    const savedEmail =
+        localStorage.getItem(
+            "demoAlertEmail"
+        );
+
 
     if (savedEmail) {
-        emailInput.value = savedEmail;
-        updateEmailStatus(savedEmail);
+
+        emailInput.value =
+            savedEmail;
+
+        updateEmailStatus(
+            savedEmail
+        );
     }
 
-    saveButton.addEventListener("click", saveEmail);
+
+    saveButton.addEventListener(
+        "click",
+        saveEmail
+    );
+
 }
 
-/* =========================
-   SAVE EMAIL
-   ========================= */
+
+/* =========================================================
+   SAVE DEMO EMAIL
+   ========================================================= */
 
 function saveEmail() {
-    const emailInput = document.getElementById("alertEmail");
+
+    const emailInput =
+        document.getElementById(
+            "alertEmail"
+        );
+
 
     if (!emailInput) {
         return;
     }
 
-    const email = emailInput.value.trim();
+
+    const email =
+        emailInput.value.trim();
+
 
     if (!email) {
-        alert("Please enter an email address.");
+
+        alert(
+            "Please enter an email address."
+        );
+
         return;
     }
 
-    if (!email.includes("@") || !email.includes(".")) {
-        alert("Please enter a valid email address.");
+
+    if (
+        !email.includes("@") ||
+        !email.includes(".")
+    ) {
+
+        alert(
+            "Please enter a valid email address."
+        );
+
         return;
     }
 
-    localStorage.setItem("demoAlertEmail", email);
 
-    updateEmailStatus(email);
+    localStorage.setItem(
+        "demoAlertEmail",
+        email
+    );
 
-    alert("Demo alert email saved successfully!");
+
+    updateEmailStatus(
+        email
+    );
+
+
+    alert(
+        "Demo alert email saved successfully!"
+    );
+
 }
 
-/* =========================
-   UPDATE EMAIL STATUS
-   ========================= */
+
+/* =========================================================
+   EMAIL STATUS
+   ========================================================= */
 
 function updateEmailStatus(email) {
-    const status = document.getElementById("emailStatus");
+
+    const status =
+        document.getElementById(
+            "emailStatus"
+        );
+
 
     if (!status) {
         return;
     }
 
-    status.textContent = "Saved email: " + email;
+
+    status.textContent =
+        "Saved email: " + email;
+
 }
 
-/* =========================
+
+/* =========================================================
    EMAIL MESSAGE
-   ========================= */
+   ========================================================= */
 
 function showEmailMessage(message) {
-    const status = document.getElementById("emailStatus");
+
+    const status =
+        document.getElementById(
+            "emailStatus"
+        );
+
 
     if (status) {
-        status.textContent = message;
+
+        status.textContent =
+            message;
     }
 
+
     console.log(message);
+
 }
 
-/* =========================
+
+/* =========================================================
    SEND EMAIL ALERT
-   ========================= */
+   ========================================================= */
 
 async function sendEmailAlert(result) {
 
-    console.log("Preparing pest email alert...");
+    console.log(
+        "Preparing pest email alert..."
+    );
 
-    const savedEmail = localStorage.getItem("demoAlertEmail");
 
-    /* No email entered */
+    const savedEmail =
+        localStorage.getItem(
+            "demoAlertEmail"
+        );
+
+
+    /* -------------------------
+       CHECK SAVED EMAIL
+       ------------------------- */
+
     if (!savedEmail) {
 
         showEmailMessage(
             "⚠️ Please save a demo email first."
         );
 
+
         alert(
             "Pest detected!\n\n" +
-            "Please enter the email address for the demo alert and press Save Email."
+            "Please enter the email address " +
+            "for the demo alert and press Save Email."
         );
+
 
         return;
     }
 
-    /* Check EmailJS */
-    if (typeof emailjs === "undefined") {
+
+    /* -------------------------
+       CHECK EMAILJS
+       ------------------------- */
+
+    if (
+        typeof emailjs === "undefined"
+    ) {
 
         showEmailMessage(
             "❌ EmailJS library is not loaded."
         );
 
+
+        console.error(
+            "EmailJS is undefined."
+        );
+
+
         return;
     }
+
 
     try {
 
         const templateParams = {
 
-            to_email: savedEmail,
+            to_email:
+                savedEmail,
 
-            pest_name: result.name,
+            pest_name:
+                result.name,
 
-            confidence: result.confidence + "%",
+            confidence:
+                result.confidence + "%",
 
-            status: "Pest Detected"
+            status:
+                "Pest Detected"
+
         };
 
-        console.log("Email parameters:", templateParams);
 
-        const response = await emailjs.send(
-            EMAIL_SERVICE_ID,
-            EMAIL_TEMPLATE_ID,
+        console.log(
+            "Sending email with:",
             templateParams
         );
 
-        console.log("EmailJS response:", response);
 
-        if (response && response.status === 200) {
+        const response =
+            await emailjs.send(
+                EMAIL_SERVICE_ID,
+                EMAIL_TEMPLATE_ID,
+                templateParams
+            );
+
+
+        console.log(
+            "EmailJS response:",
+            response
+        );
+
+
+        if (
+            response &&
+            response.status === 200
+        ) {
 
             emailAlerts++;
 
             updateDashboard();
 
+
             showEmailMessage(
-                "📧 Email alert sent to " + savedEmail
+                "📧 Email alert sent to " +
+                savedEmail
             );
+
 
             console.log(
                 "Email alert sent successfully."
             );
 
-        } else {
-
-            showEmailMessage(
-                "⚠️ Email was not sent."
-            );
         }
 
     } catch (error) {
@@ -244,22 +395,29 @@ async function sendEmailAlert(result) {
             error
         );
 
+
         const errorMessage =
             error?.text ||
             error?.message ||
             "Unknown EmailJS error";
 
+
         showEmailMessage(
-            "❌ Email error: " + errorMessage
+            "❌ Email error: " +
+            errorMessage
         );
+
 
         alert(
             "Email could not be sent.\n\n" +
             "EmailJS says:\n" +
             errorMessage
         );
+
     }
+
 }
+
 
 /* =========================================================
    LOAD AI MODEL
@@ -267,9 +425,18 @@ async function sendEmailAlert(result) {
 
 async function loadModel() {
 
+    const status =
+        document.getElementById(
+            "modelStatus"
+        );
+
+
     try {
 
-        console.log("Loading AI model...");
+        console.log(
+            "Loading AI model..."
+        );
+
 
         if (
             typeof tmImage === "undefined"
@@ -279,25 +446,49 @@ async function loadModel() {
                 "Teachable Machine library not loaded."
             );
 
+
+            if (status) {
+
+                status.textContent =
+                    "❌ AI Model Library Not Loaded";
+            }
+
+
             return;
         }
 
-        model = await tmImage.load(
-            MODEL_URL + "?v=20260927",
-            METADATA_URL + "?v=20260927"
-        );
+
+        model =
+            await tmImage.load(
+                MODEL_URL +
+                "?v=20260927-7",
+
+                METADATA_URL +
+                "?v=20260927-7"
+            );
+
 
         maxPredictions =
             model.getTotalClasses();
+
 
         console.log(
             "AI model loaded successfully."
         );
 
+
         console.log(
-            "Number of classes:",
+            "Classes:",
             maxPredictions
         );
+
+
+        if (status) {
+
+            status.textContent =
+                "✅ AI Model Ready";
+        }
+
 
     } catch (error) {
 
@@ -306,12 +497,23 @@ async function loadModel() {
             error
         );
 
+
+        if (status) {
+
+            status.textContent =
+                "❌ AI Model Loading Failed";
+        }
+
+
         alert(
             "AI model could not be loaded.\n\n" +
             "Please check the model folder."
         );
+
     }
+
 }
+
 
 /* =========================================================
    IMAGE UPLOAD
@@ -319,57 +521,70 @@ async function loadModel() {
 
 function setupUpload() {
 
-    const uploadInput =
-        document.getElementById("imageUpload");
+    const input =
+        document.getElementById(
+            "imageInput"
+        );
 
-    if (!uploadInput) {
+
+    if (!input) {
+
+        console.log(
+            "imageInput not found."
+        );
+
         return;
     }
 
-    uploadInput.addEventListener(
+
+    input.addEventListener(
         "change",
         async function(event) {
 
             const file =
                 event.target.files[0];
 
+
             if (!file) {
                 return;
             }
 
+
             const image =
-                document.createElement("img");
+                document.getElementById(
+                    "previewImage"
+                );
 
-            image.onload = async function() {
 
-                displayImage(image);
+            if (!image) {
+                return;
+            }
 
-                await predictImage(image);
-            };
+
+            const imageURL =
+                URL.createObjectURL(
+                    file
+                );
+
 
             image.src =
-                URL.createObjectURL(file);
+                imageURL;
+
+
+            image.onload =
+                async function() {
+
+                    await predictImage(
+                        image
+                    );
+
+                };
+
         }
     );
+
 }
 
-/* =========================
-   DISPLAY UPLOADED IMAGE
-   ========================= */
-
-function displayImage(image) {
-
-    const preview =
-        document.getElementById("imagePreview");
-
-    if (!preview) {
-        return;
-    }
-
-    preview.src = image.src;
-
-    preview.style.display = "block";
-}
 
 /* =========================================================
    AI PREDICTION
@@ -380,11 +595,12 @@ async function predictImage(image) {
     if (!model) {
 
         alert(
-            "AI model is still loading. Please try again."
+            "AI model is still loading. Please wait."
         );
 
         return;
     }
+
 
     try {
 
@@ -392,11 +608,16 @@ async function predictImage(image) {
             "Running AI prediction..."
         );
 
+
         const predictions =
-            await model.predict(image);
+            await model.predict(
+                image
+            );
+
 
         let highestPrediction =
             predictions[0];
+
 
         for (
             let i = 1;
@@ -412,7 +633,9 @@ async function predictImage(image) {
                 highestPrediction =
                     predictions[i];
             }
+
         }
+
 
         const result = {
 
@@ -424,36 +647,56 @@ async function predictImage(image) {
                     highestPrediction.probability *
                     100
                 ).toFixed(1)
+
         };
 
+
         console.log(
-            "Prediction result:",
+            "Prediction:",
             result
         );
+
 
         displayPrediction(
             result,
             predictions
         );
 
-        saveDetection(result);
+
+        saveDetection(
+            result
+        );
+
 
         if (
-            !isHealthyLeaf(result.name)
+            !isHealthyLeaf(
+                result.name
+            )
         ) {
 
             pestAlerts++;
 
+
             updateDashboard();
 
-            await sendEmailAlert(result);
+
+            createPestAlert(
+                result
+            );
+
+
+            await sendEmailAlert(
+                result
+            );
 
         } else {
 
             showEmailMessage(
                 "🌿 Healthy leaf detected."
             );
+
         }
+
 
     } catch (error) {
 
@@ -462,171 +705,15 @@ async function predictImage(image) {
             error
         );
 
+
         alert(
             "AI detection failed."
         );
+
     }
+
 }
 
-/* =========================================================
-   CAMERA
-   ========================================================= */
-
-function setupCamera() {
-
-    const startButton =
-        document.getElementById("startCamera");
-
-    const switchButton =
-        document.getElementById("switchCamera");
-
-    const captureButton =
-        document.getElementById("captureDetect");
-
-    if (startButton) {
-
-        startButton.addEventListener(
-            "click",
-            startCamera
-        );
-    }
-
-    if (switchButton) {
-
-        switchButton.addEventListener(
-            "click",
-            switchCamera
-        );
-    }
-
-    if (captureButton) {
-
-        captureButton.addEventListener(
-            "click",
-            captureAndDetect
-        );
-    }
-}
-
-/* =========================
-   START CAMERA
-   ========================= */
-
-async function startCamera() {
-
-    try {
-
-        if (cameraStream) {
-
-            cameraStream
-                .getTracks()
-                .forEach(track =>
-                    track.stop()
-                );
-        }
-
-        cameraStream =
-            await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode:
-                        currentFacingMode
-                },
-                audio: false
-            });
-
-        const video =
-            document.getElementById("camera");
-
-        if (!video) {
-            return;
-        }
-
-        video.srcObject =
-            cameraStream;
-
-        await video.play();
-
-        console.log(
-            "Camera started."
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Camera error:",
-            error
-        );
-
-        alert(
-            "Camera could not be started.\n\n" +
-            "Please allow camera permission."
-        );
-    }
-}
-
-/* =========================
-   SWITCH CAMERA
-   ========================= */
-
-async function switchCamera() {
-
-    currentFacingMode =
-        currentFacingMode === "environment"
-            ? "user"
-            : "environment";
-
-    await startCamera();
-}
-
-/* =========================
-   CAPTURE CAMERA IMAGE
-   ========================= */
-
-async function captureAndDetect() {
-
-    const video =
-        document.getElementById("camera");
-
-    if (!video || !cameraStream) {
-
-        alert(
-            "Please start the camera first."
-        );
-
-        return;
-    }
-
-    const canvas =
-        document.createElement("canvas");
-
-    canvas.width =
-        video.videoWidth;
-
-    canvas.height =
-        video.videoHeight;
-
-    const context =
-        canvas.getContext("2d");
-
-    context.drawImage(
-        video,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    const image =
-        document.createElement("img");
-
-    image.src =
-        canvas.toDataURL("image/jpeg");
-
-    image.onload = async function() {
-
-        await predictImage(image);
-    };
-}
 
 /* =========================================================
    DISPLAY PREDICTION
@@ -637,42 +724,60 @@ function displayPrediction(
     predictions
 ) {
 
-    const resultName =
-        document.getElementById("resultName");
+    const pestName =
+        document.getElementById(
+            "pestName"
+        );
 
-    const resultConfidence =
-        document.getElementById("resultConfidence");
 
-    const resultStatus =
-        document.getElementById("resultStatus");
+    const confidence =
+        document.getElementById(
+            "confidence"
+        );
 
-    if (resultName) {
 
-        resultName.textContent =
+    const detectionStatus =
+        document.getElementById(
+            "detectionStatus"
+        );
+
+
+    if (pestName) {
+
+        pestName.textContent =
             result.name;
     }
 
-    if (resultConfidence) {
 
-        resultConfidence.textContent =
+    if (confidence) {
+
+        confidence.textContent =
             result.confidence + "%";
     }
 
-    if (resultStatus) {
 
-        if (isHealthyLeaf(result.name)) {
+    if (detectionStatus) {
 
-            resultStatus.textContent =
+        if (
+            isHealthyLeaf(
+                result.name
+            )
+        ) {
+
+            detectionStatus.textContent =
                 "🌿 Healthy Leaf";
 
         } else {
 
-            resultStatus.textContent =
+            detectionStatus.textContent =
                 "⚠️ Pest Detected";
         }
+
     }
 
-    /* Prediction bars */
+
+    /* Update prediction bars
+       if they exist */
 
     predictions.forEach(
         prediction => {
@@ -683,15 +788,18 @@ function displayPrediction(
                     100
                 ).toFixed(1);
 
+
             const className =
                 prediction.className
                     .replace(/\s+/g, "")
                     .toLowerCase();
 
+
             const bar =
                 document.getElementById(
                     "bar-" + className
                 );
+
 
             if (bar) {
 
@@ -699,22 +807,27 @@ function displayPrediction(
                     percentage + "%";
             }
 
+
             const value =
                 document.getElementById(
                     "value-" + className
                 );
+
 
             if (value) {
 
                 value.textContent =
                     percentage + "%";
             }
+
         }
     );
+
 }
 
+
 /* =========================================================
-   HEALTH CHECK
+   HEALTHY CHECK
    ========================================================= */
 
 function isHealthyLeaf(name) {
@@ -722,35 +835,281 @@ function isHealthyLeaf(name) {
     return name
         .toLowerCase()
         .includes("healthy");
+
 }
 
+
 /* =========================================================
-   DETECTION HISTORY
+   CAMERA SETUP
+   ========================================================= */
+
+function setupCamera() {
+
+    const startButton =
+        document.getElementById(
+            "startCamera"
+        );
+
+
+    const switchButton =
+        document.getElementById(
+            "switchCamera"
+        );
+
+
+    const captureButton =
+        document.getElementById(
+            "captureImage"
+        );
+
+
+    if (startButton) {
+
+        startButton.addEventListener(
+            "click",
+            startCamera
+        );
+
+    }
+
+
+    if (switchButton) {
+
+        switchButton.addEventListener(
+            "click",
+            switchCamera
+        );
+
+    }
+
+
+    if (captureButton) {
+
+        captureButton.addEventListener(
+            "click",
+            captureAndDetect
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   START CAMERA
+   ========================================================= */
+
+async function startCamera() {
+
+    try {
+
+        if (cameraStream) {
+
+            cameraStream
+                .getTracks()
+                .forEach(
+                    track =>
+                        track.stop()
+                );
+
+        }
+
+
+        cameraStream =
+            await navigator.mediaDevices.getUserMedia({
+
+                video: {
+
+                    facingMode:
+                        currentFacingMode
+
+                },
+
+                audio: false
+
+            });
+
+
+        const video =
+            document.getElementById(
+                "camera"
+            );
+
+
+        if (!video) {
+            return;
+        }
+
+
+        video.srcObject =
+            cameraStream;
+
+
+        await video.play();
+
+
+        console.log(
+            "Camera started."
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Camera error:",
+            error
+        );
+
+
+        alert(
+            "Camera could not be started.\n\n" +
+            "Please allow camera permission."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SWITCH CAMERA
+   ========================================================= */
+
+async function switchCamera() {
+
+    currentFacingMode =
+        currentFacingMode ===
+        "environment"
+            ? "user"
+            : "environment";
+
+
+    await startCamera();
+
+}
+
+
+/* =========================================================
+   CAPTURE CAMERA IMAGE
+   ========================================================= */
+
+async function captureAndDetect() {
+
+    const video =
+        document.getElementById(
+            "camera"
+        );
+
+
+    if (
+        !video ||
+        !cameraStream
+    ) {
+
+        alert(
+            "Please start the camera first."
+        );
+
+        return;
+    }
+
+
+    const canvas =
+        document.createElement(
+            "canvas"
+        );
+
+
+    canvas.width =
+        video.videoWidth;
+
+
+    canvas.height =
+        video.videoHeight;
+
+
+    const context =
+        canvas.getContext(
+            "2d"
+        );
+
+
+    context.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    const image =
+        document.createElement(
+            "img"
+        );
+
+
+    image.src =
+        canvas.toDataURL(
+            "image/jpeg"
+        );
+
+
+    image.onload =
+        async function() {
+
+            await predictImage(
+                image
+            );
+
+        };
+
+}
+
+
+/* =========================================================
+   SAVE DETECTION
    ========================================================= */
 
 function saveDetection(result) {
 
+    const now =
+        new Date();
+
+
     const detection = {
 
-        name: result.name,
+        name:
+            result.name,
 
         confidence:
             result.confidence,
 
+        date:
+            now.toLocaleDateString(),
+
         time:
-            new Date().toLocaleString()
+            now.toLocaleTimeString(),
+
+        timestamp:
+            now.getTime()
+
     };
+
 
     detectionHistory.unshift(
         detection
     );
+
 
     if (
         detectionHistory.length > 20
     ) {
 
         detectionHistory.pop();
+
     }
+
 
     localStorage.setItem(
         "detectionHistory",
@@ -759,14 +1118,17 @@ function saveDetection(result) {
         )
     );
 
+
     updateHistoryDisplay();
 
     updateCharts();
+
 }
 
-/* =========================
+
+/* =========================================================
    LOAD HISTORY
-   ========================= */
+   ========================================================= */
 
 function loadHistory() {
 
@@ -775,75 +1137,102 @@ function loadHistory() {
             "detectionHistory"
         );
 
+
     if (saved) {
 
         try {
 
             detectionHistory =
-                JSON.parse(saved);
+                JSON.parse(
+                    saved
+                );
 
         } catch (error) {
 
-            detectionHistory = [];
+            console.error(
+                "History loading error:",
+                error
+            );
+
+            detectionHistory =
+                [];
+
         }
+
     }
 
+
     updateHistoryDisplay();
+
 }
 
-/* =========================
+
+/* =========================================================
    HISTORY DISPLAY
-   ========================= */
+   ========================================================= */
 
 function updateHistoryDisplay() {
 
-    const historyContainer =
+    const historyBody =
         document.getElementById(
-            "historyList"
+            "historyBody"
         );
 
-    if (!historyContainer) {
+
+    if (!historyBody) {
         return;
     }
 
-    historyContainer.innerHTML = "";
+
+    historyBody.innerHTML =
+        "";
+
 
     if (
         detectionHistory.length === 0
     ) {
 
-        historyContainer.innerHTML =
-            "<p>No detections yet.</p>";
+        historyBody.innerHTML = `
+            <tr>
+                <td colspan="4">
+                    No detections yet.
+                </td>
+            </tr>
+        `;
 
         return;
     }
 
+
     detectionHistory.forEach(
         detection => {
 
-            const item =
+            const row =
                 document.createElement(
-                    "div"
+                    "tr"
                 );
 
-            item.className =
-                "history-item";
 
-            item.innerHTML = `
-                <strong>${escapeHTML(detection.name)}</strong>
-                <span>${escapeHTML(detection.confidence)}%</span>
-                <small>${escapeHTML(detection.time)}</small>
+            row.innerHTML = `
+                <td>${escapeHTML(detection.date || "")}</td>
+                <td>${escapeHTML(detection.time || "")}</td>
+                <td>${escapeHTML(detection.name || "")}</td>
+                <td>${escapeHTML(detection.confidence || "")}%</td>
             `;
 
-            historyContainer.appendChild(
-                item
+
+            historyBody.appendChild(
+                row
             );
+
         }
     );
+
 }
 
+
 /* =========================================================
-   DASHBOARD
+   DASHBOARD UPDATE
    ========================================================= */
 
 function updateDashboard() {
@@ -853,49 +1242,117 @@ function updateDashboard() {
             "totalDetections"
         );
 
-    const pestCount =
+
+    const activeThreats =
         document.getElementById(
-            "pestAlerts"
+            "activeThreats"
         );
+
 
     const emailCount =
         document.getElementById(
             "emailAlerts"
         );
 
+
     if (totalDetections) {
 
         totalDetections.textContent =
             detectionHistory.length;
+
     }
 
-    if (pestCount) {
 
-        pestCount.textContent =
+    if (activeThreats) {
+
+        activeThreats.textContent =
             pestAlerts;
+
     }
+
 
     if (emailCount) {
 
         emailCount.textContent =
             emailAlerts;
+
     }
 
+
     updateCharts();
+
 }
 
+
 /* =========================================================
-   CHARTS
+   CREATE PEST ALERT
+   ========================================================= */
+
+function createPestAlert(result) {
+
+    const container =
+        document.getElementById(
+            "alertContainer"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    const empty =
+        container.querySelector(
+            ".empty-state"
+        );
+
+
+    if (empty) {
+
+        empty.remove();
+
+    }
+
+
+    const alertBox =
+        document.createElement(
+            "div"
+        );
+
+
+    alertBox.className =
+        "alert-item";
+
+
+    alertBox.innerHTML = `
+        <strong>⚠️ Pest Detected</strong>
+        <p>${escapeHTML(result.name)}</p>
+        <span>Confidence: ${escapeHTML(result.confidence)}%</span>
+        <small>${new Date().toLocaleString()}</small>
+    `;
+
+
+    container.prepend(
+        alertBox
+    );
+
+}
+
+
+/* =========================================================
+   CHART SETUP
    ========================================================= */
 
 function setupCharts() {
 
     updateCharts();
+
 }
 
-/* =========================
+
+/* =========================================================
    UPDATE CHARTS
-   ========================= */
+   ========================================================= */
 
 function updateCharts() {
 
@@ -903,17 +1360,37 @@ function updateCharts() {
         typeof Chart === "undefined"
     ) {
 
+        console.log(
+            "Chart.js not loaded."
+        );
+
         return;
     }
 
-    const pestCanvas =
+
+    updatePestChart();
+
+    updateTrendChart();
+
+}
+
+
+/* =========================================================
+   PEST BAR CHART
+   ========================================================= */
+
+function updatePestChart() {
+
+    const canvas =
         document.getElementById(
             "pestChart"
         );
 
-    if (!pestCanvas) {
+
+    if (!canvas) {
         return;
     }
+
 
     const counts = {
 
@@ -926,7 +1403,9 @@ function updateCharts() {
         Thrips: 0,
 
         "Healthy leaf": 0
+
     };
+
 
     detectionHistory.forEach(
         detection => {
@@ -940,35 +1419,149 @@ function updateCharts() {
                 counts[
                     detection.name
                 ]++;
+
             }
+
         }
     );
+
 
     if (pestChart) {
 
         pestChart.destroy();
+
     }
+
 
     pestChart =
         new Chart(
-            pestCanvas,
+            canvas,
             {
+
                 type: "bar",
 
                 data: {
 
                     labels:
-                        Object.keys(counts),
+                        Object.keys(
+                            counts
+                        ),
 
                     datasets: [
                         {
+
                             label:
                                 "Detections",
 
                             data:
-                                Object.values(counts)
+                                Object.values(
+                                    counts
+                                )
+
                         }
                     ]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    maintainAspectRatio:
+                        false,
+
+                    plugins: {
+
+                        legend: {
+
+                            display:
+                                true
+
+                        }
+
+                    }
+
+                }
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   TREND CHART
+   ========================================================= */
+
+function updateTrendChart() {
+
+    const canvas =
+        document.getElementById(
+            "trendChart"
+        );
+
+
+    if (!canvas) {
+        return;
+    }
+
+
+    const recent =
+        detectionHistory
+            .slice()
+            .reverse();
+
+
+    const labels =
+        recent.map(
+            detection =>
+                detection.time || ""
+        );
+
+
+    const values =
+        recent.map(
+            detection =>
+                Number(
+                    detection.confidence
+                ) || 0
+        );
+
+
+    if (trendChart) {
+
+        trendChart.destroy();
+
+    }
+
+
+    trendChart =
+        new Chart(
+            canvas,
+            {
+
+                type: "line",
+
+                data: {
+
+                    labels:
+                        labels,
+
+                    datasets: [
+                        {
+
+                            label:
+                                "Confidence %",
+
+                            data:
+                                values,
+
+                            tension:
+                                0.3
+
+                        }
+                    ]
+
                 },
 
                 options: {
@@ -977,10 +1570,14 @@ function updateCharts() {
 
                     maintainAspectRatio:
                         false
+
                 }
+
             }
         );
+
 }
+
 
 /* =========================================================
    NAVIGATION
@@ -990,8 +1587,15 @@ function setupNavigation() {
 
     const navLinks =
         document.querySelectorAll(
-            "[data-section]"
+            ".nav-link"
         );
+
+
+    const sections =
+        document.querySelectorAll(
+            ".content-section, .dashboard-section"
+        );
+
 
     navLinks.forEach(
         link => {
@@ -1002,75 +1606,99 @@ function setupNavigation() {
 
                     event.preventDefault();
 
-                    const sectionId =
+
+                    const targetId =
                         link.getAttribute(
-                            "data-section"
+                            "data-target"
                         );
 
-                    showSection(
-                        sectionId
+
+                    sections.forEach(
+                        section => {
+
+                            section.style.display =
+                                "none";
+
+                        }
                     );
+
+
+                    const target =
+                        document.getElementById(
+                            targetId
+                        );
+
+
+                    if (target) {
+
+                        target.style.display =
+                            "block";
+
+                    }
+
+
+                    navLinks.forEach(
+                        item =>
+                            item.classList.remove(
+                                "active"
+                            )
+                    );
+
+
+                    link.classList.add(
+                        "active"
+                    );
+
+
+                    history.replaceState(
+                        null,
+                        "",
+                        "#" + targetId
+                    );
+
                 }
             );
+
         }
     );
-}
 
-/* =========================
-   SHOW SECTION
-   ========================= */
 
-function showSection(sectionId) {
-
-    const sections =
-        document.querySelectorAll(
-            ".section"
-        );
+    /* Open dashboard initially */
 
     sections.forEach(
         section => {
 
             section.style.display =
                 "none";
+
         }
     );
 
-    const target =
+
+    const dashboard =
         document.getElementById(
-            sectionId
+            "dashboard"
         );
 
-    if (target) {
 
-        target.style.display =
+    if (dashboard) {
+
+        dashboard.style.display =
             "block";
+
     }
 
-    const links =
-        document.querySelectorAll(
-            "[data-section]"
+
+    if (navLinks.length > 0) {
+
+        navLinks[0].classList.add(
+            "active"
         );
 
-    links.forEach(
-        link => {
+    }
 
-            link.classList.remove(
-                "active"
-            );
-
-            if (
-                link.getAttribute(
-                    "data-section"
-                ) === sectionId
-            ) {
-
-                link.classList.add(
-                    "active"
-                );
-            }
-        }
-    );
 }
+
 
 /* =========================================================
    LANGUAGE
@@ -1078,33 +1706,40 @@ function showSection(sectionId) {
 
 function setupLanguage() {
 
-    const languageSelect =
+    const selector =
         document.getElementById(
-            "languageSelect"
+            "languageSelector"
         );
 
-    if (!languageSelect) {
+
+    if (!selector) {
         return;
     }
 
-    languageSelect.value =
+
+    selector.value =
         currentLanguage;
 
-    languageSelect.addEventListener(
+
+    selector.addEventListener(
         "change",
         event => {
 
             currentLanguage =
                 event.target.value;
 
+
             updateLanguage();
+
         }
     );
+
 }
 
-/* =========================
+
+/* =========================================================
    LANGUAGE UPDATE
-   ========================= */
+   ========================================================= */
 
 function updateLanguage() {
 
@@ -1113,15 +1748,20 @@ function updateLanguage() {
         currentLanguage
     );
 
+
     /*
-       Keep your existing English/Tamil
-       text-switching logic here if your
-       HTML already uses language attributes.
+       Your existing HTML contains
+       data-i18n attributes.
+
+       This keeps the selector working
+       without changing your current design.
     */
+
 }
 
+
 /* =========================================================
-   SENSOR DISPLAY
+   SENSOR UPDATE HELPER
    ========================================================= */
 
 function updateSensorValue(
@@ -1134,12 +1774,16 @@ function updateSensorValue(
             elementId
         );
 
+
     if (element) {
 
         element.textContent =
             value;
+
     }
+
 }
+
 
 /* =========================================================
    HTML ESCAPE
@@ -1148,15 +1792,37 @@ function updateSensorValue(
 function escapeHTML(value) {
 
     return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
 }
 
+
 /* =========================================================
-   PAGE EXIT - STOP CAMERA
+   STOP CAMERA WHEN LEAVING PAGE
    ========================================================= */
 
 window.addEventListener(
@@ -1167,9 +1833,12 @@ window.addEventListener(
 
             cameraStream
                 .getTracks()
-                .forEach(track =>
-                    track.stop()
+                .forEach(
+                    track =>
+                        track.stop()
                 );
+
         }
+
     }
 );
