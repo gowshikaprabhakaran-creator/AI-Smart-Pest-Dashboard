@@ -1,43 +1,60 @@
 // ============================================================
 // AI SMART PEST DETECTION & ALERT SYSTEM
 // TEAM 16
+// AUTOMATIC AI DETECTION
+// ============================================================
+
+
+// ============================================================
+// CONFIGURATION
 // ============================================================
 
 const MODEL_URL = "./model/";
-const MODEL_VERSION = "20260927-4";
 
-const EMAIL_SERVICE_ID = "service_x2d7sj";
-const EMAIL_TEMPLATE_ID = "template_6efhw0d";
-const EMAIL_PUBLIC_KEY = "wOORs4b9toARevid-";
-
-
-let model = null;
-let modelLoaded = false;
-
-let uploadedImage = null;
-let cameraStream = null;
-
-let currentCamera = "environment";
-
-let totalDetections = 0;
-let activeThreats = 0;
-let emailAlerts = 0;
-
-let detectionHistory = [];
-
-let isDetecting = false;
-
-let pestChart = null;
-let trendChart = null;
+const MODEL_VERSION = "20260927-5";
 
 
 // ============================================================
 // EMAILJS
 // ============================================================
 
-emailjs.init({
-    publicKey: EMAIL_PUBLIC_KEY
-});
+const EMAIL_SERVICE_ID =
+    "service_x2d7sj";
+
+const EMAIL_TEMPLATE_ID =
+    "template_6efhw0d";
+
+const EMAIL_PUBLIC_KEY =
+    "wOORs4b9toARevid-";
+
+
+// ============================================================
+// GLOBAL VARIABLES
+// ============================================================
+
+let model = null;
+
+let modelLoaded = false;
+
+let uploadedImage = null;
+
+let cameraStream = null;
+
+let currentCamera = "environment";
+
+let totalDetections = 0;
+
+let activeThreats = 0;
+
+let emailAlerts = 0;
+
+let detectionHistory = [];
+
+let pestChart = null;
+
+let trendChart = null;
+
+let isDetecting = false;
 
 
 // ============================================================
@@ -48,27 +65,219 @@ document.addEventListener(
     "DOMContentLoaded",
     async function () {
 
+        console.log(
+            "AI Smart Pest Detection - Team 16"
+        );
+
+
         setupImageUpload();
 
         setupCamera();
-
-        setupEmail();
 
         setupLanguage();
 
         setupNavigation();
 
+        setupEmail();
+
         updateSensorDisplay();
 
-        loadSavedEmail();
+        initializeEmailJS();
 
         await loadAIModel();
 
         updateDashboard();
 
+        updateHistory();
+
+        updateAlerts();
+
         updateCharts();
+
     }
 );
+
+
+// ============================================================
+// EMAILJS INITIALIZATION
+// ============================================================
+
+function initializeEmailJS() {
+
+    try {
+
+        emailjs.init({
+
+            publicKey:
+                EMAIL_PUBLIC_KEY
+
+        });
+
+
+        console.log(
+            "EmailJS initialized."
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "EmailJS initialization error:",
+            error
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// EMAIL SETUP
+// ============================================================
+
+function setupEmail() {
+
+    const saveButton =
+        document.getElementById(
+            "saveEmail"
+        );
+
+
+    const emailInput =
+        document.getElementById(
+            "alertEmail"
+        );
+
+
+    const savedEmail =
+        localStorage.getItem(
+            "demoAlertEmail"
+        );
+
+
+    if (
+        savedEmail &&
+        emailInput
+    ) {
+
+        emailInput.value =
+            savedEmail;
+
+    }
+
+
+    if (savedEmail) {
+
+        showSavedEmailMessage(
+            "✅ Demo email saved: " +
+            savedEmail
+        );
+
+    }
+
+
+    if (saveButton) {
+
+        saveButton.addEventListener(
+            "click",
+            saveEmail
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// SAVE EMAIL
+// ============================================================
+
+function saveEmail() {
+
+    const emailInput =
+        document.getElementById(
+            "alertEmail"
+        );
+
+
+    if (!emailInput) return;
+
+
+    const email =
+        emailInput.value.trim();
+
+
+    if (!email) {
+
+        showSavedEmailMessage(
+            "⚠️ Please enter an email address."
+        );
+
+        return;
+
+    }
+
+
+    const emailPattern =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+
+    if (
+        !emailPattern.test(email)
+    ) {
+
+        showSavedEmailMessage(
+            "⚠️ Please enter a valid email address."
+        );
+
+        return;
+
+    }
+
+
+    localStorage.setItem(
+        "demoAlertEmail",
+        email
+    );
+
+
+    showSavedEmailMessage(
+        "✅ Email saved successfully: " +
+        email
+    );
+
+
+    console.log(
+        "Demo alert email saved:",
+        email
+    );
+
+}
+
+
+// ============================================================
+// SAVED EMAIL MESSAGE
+// ============================================================
+
+function showSavedEmailMessage(message) {
+
+    const status =
+        document.getElementById(
+            "emailStatus"
+        );
+
+
+    if (!status) return;
+
+
+    status.textContent =
+        message;
+
+
+    status.style.color =
+        "#166534";
+
+}
 
 
 // ============================================================
@@ -82,6 +291,7 @@ async function loadAIModel() {
             "modelStatus"
         );
 
+
     try {
 
         if (status) {
@@ -91,6 +301,7 @@ async function loadAIModel() {
 
             status.className =
                 "model-status";
+
         }
 
 
@@ -107,7 +318,8 @@ async function loadAIModel() {
 
 
         console.log(
-            "Loading AI model..."
+            "Loading model:",
+            modelFile
         );
 
 
@@ -122,7 +334,12 @@ async function loadAIModel() {
 
 
         console.log(
-            "AI Classes:",
+            "AI model loaded successfully."
+        );
+
+
+        console.log(
+            "AI classes:",
             model.getClassLabels()
         );
 
@@ -134,12 +351,14 @@ async function loadAIModel() {
 
             status.className =
                 "model-status model-ready";
+
         }
+
 
     } catch (error) {
 
         console.error(
-            "AI Model Error:",
+            "AI model loading error:",
             error
         );
 
@@ -154,151 +373,17 @@ async function loadAIModel() {
 
             status.className =
                 "model-status model-error";
+
         }
 
-    }
-}
-
-
-// ============================================================
-// EMAIL SETUP
-// ============================================================
-
-function setupEmail() {
-
-    const input =
-        document.getElementById(
-            "alertEmail"
-        );
-
-    const button =
-        document.getElementById(
-            "saveEmail"
-        );
-
-    if (!input || !button) return;
-
-
-    button.addEventListener(
-        "click",
-        saveEmail
-    );
-}
-
-
-// ============================================================
-// SAVE EMAIL
-// ============================================================
-
-function saveEmail() {
-
-    const input =
-        document.getElementById(
-            "alertEmail"
-        );
-
-    const status =
-        document.getElementById(
-            "emailStatus"
-        );
-
-
-    if (!input) return;
-
-
-    const email =
-        input.value.trim();
-
-
-    if (!email) {
 
         alert(
-            "Please enter an email address."
+            "AI model could not be loaded.\n\n" +
+            "Please check the model folder."
         );
 
-        return;
     }
 
-
-    if (
-        !email.includes("@") ||
-        !email.includes(".")
-    ) {
-
-        alert(
-            "Please enter a valid email address."
-        );
-
-        return;
-    }
-
-
-    localStorage.setItem(
-        "demoAlertEmail",
-        email
-    );
-
-
-    if (status) {
-
-        status.textContent =
-            "Alert email saved: " +
-            email;
-
-        status.style.color =
-            "#166534";
-    }
-
-
-    alert(
-        "Demo alert email saved successfully."
-    );
-}
-
-
-// ============================================================
-// LOAD SAVED EMAIL
-// ============================================================
-
-function loadSavedEmail() {
-
-    const savedEmail =
-        localStorage.getItem(
-            "demoAlertEmail"
-        );
-
-
-    const input =
-        document.getElementById(
-            "alertEmail"
-        );
-
-
-    const status =
-        document.getElementById(
-            "emailStatus"
-        );
-
-
-    if (
-        savedEmail &&
-        input
-    ) {
-
-        input.value =
-            savedEmail;
-
-
-        if (status) {
-
-            status.textContent =
-                "Saved email: " +
-                savedEmail;
-
-            status.style.color =
-                "#166534";
-        }
-    }
 }
 
 
@@ -355,32 +440,51 @@ function setupImageUpload() {
 
                                 preview.style.display =
                                     "block";
+
                             }
 
 
-                            // AUTO DETECT
+                            console.log(
+                                "Image uploaded."
+                            );
+
+
                             await detectPest();
+
+                        };
+
+
+                    uploadedImage.onerror =
+                        function () {
+
+                            alert(
+                                "Could not load this image."
+                            );
+
                         };
 
 
                     uploadedImage.src =
                         e.target.result;
+
                 };
 
 
             reader.readAsDataURL(file);
+
         }
     );
+
 }
 
 
 // ============================================================
-// CAMERA
+// CAMERA SETUP
 // ============================================================
 
 function setupCamera() {
 
-    const start =
+    const startButton =
         document.getElementById(
             "startCamera"
         );
@@ -392,18 +496,19 @@ function setupCamera() {
         );
 
 
-    const capture =
+    const captureButton =
         document.getElementById(
             "captureImage"
         );
 
 
-    if (start) {
+    if (startButton) {
 
-        start.addEventListener(
+        startButton.addEventListener(
             "click",
             startCamera
         );
+
     }
 
 
@@ -413,16 +518,19 @@ function setupCamera() {
             "click",
             switchCamera
         );
+
     }
 
 
-    if (capture) {
+    if (captureButton) {
 
-        capture.addEventListener(
+        captureButton.addEventListener(
             "click",
             captureImage
         );
+
     }
+
 }
 
 
@@ -446,19 +554,37 @@ async function startCamera() {
 
     try {
 
+        if (
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ) {
+
+            alert(
+                "Camera is not supported by this browser."
+            );
+
+            return;
+
+        }
+
+
         cameraStream =
-            await navigator.mediaDevices
-                .getUserMedia({
+            await navigator.mediaDevices.getUserMedia({
 
-                    video: {
-                        facingMode: {
-                            ideal:
-                                currentCamera
-                        }
-                    },
+                video: {
 
-                    audio: false
-                });
+                    facingMode: {
+
+                        ideal:
+                            currentCamera
+
+                    }
+
+                },
+
+                audio: false
+
+            });
 
 
         video.srcObject =
@@ -466,6 +592,12 @@ async function startCamera() {
 
 
         await video.play();
+
+
+        console.log(
+            "Camera started:",
+            currentCamera
+        );
 
 
     } catch (error) {
@@ -480,7 +612,9 @@ async function startCamera() {
             "Camera could not be opened.\n\n" +
             "Please allow camera permission."
         );
+
     }
+
 }
 
 
@@ -490,14 +624,24 @@ async function startCamera() {
 
 async function switchCamera() {
 
-    currentCamera =
+    if (
         currentCamera ===
         "environment"
-            ? "user"
-            : "environment";
+    ) {
+
+        currentCamera =
+            "user";
+
+    } else {
+
+        currentCamera =
+            "environment";
+
+    }
 
 
     await startCamera();
+
 }
 
 
@@ -516,19 +660,21 @@ function stopCamera() {
             function (track) {
 
                 track.stop();
+
             }
         );
 
 
     cameraStream = null;
+
 }
 
 
 // ============================================================
-// CAPTURE + AUTO DETECT
+// CAPTURE IMAGE
 // ============================================================
 
-function captureImage() {
+async function captureImage() {
 
     const video =
         document.getElementById(
@@ -546,6 +692,7 @@ function captureImage() {
         );
 
         return;
+
     }
 
 
@@ -559,6 +706,7 @@ function captureImage() {
         );
 
         return;
+
     }
 
 
@@ -577,7 +725,9 @@ function captureImage() {
 
 
     const context =
-        canvas.getContext("2d");
+        canvas.getContext(
+            "2d"
+        );
 
 
     context.drawImage(
@@ -591,8 +741,7 @@ function captureImage() {
 
     const imageData =
         canvas.toDataURL(
-            "image/jpeg",
-            0.9
+            "image/jpeg"
         );
 
 
@@ -616,26 +765,41 @@ function captureImage() {
 
                 preview.style.display =
                     "block";
+
             }
 
 
-            // AUTO DETECT
+            console.log(
+                "Image captured."
+            );
+
+
             await detectPest();
+
         };
 
 
     uploadedImage.src =
         imageData;
+
 }
 
 
 // ============================================================
-// DETECTION
+// AI DETECTION
 // ============================================================
 
 async function detectPest() {
 
-    if (isDetecting) return;
+    if (isDetecting) {
+
+        console.log(
+            "Detection already running."
+        );
+
+        return;
+
+    }
 
 
     if (!uploadedImage) {
@@ -645,6 +809,7 @@ async function detectPest() {
         );
 
         return;
+
     }
 
 
@@ -654,10 +819,11 @@ async function detectPest() {
     ) {
 
         alert(
-            "AI model is still loading. Please wait a moment."
+            "AI model is not ready yet."
         );
 
         return;
+
     }
 
 
@@ -670,7 +836,7 @@ async function detectPest() {
     try {
 
         console.log(
-            "Running AI detection..."
+            "Starting automatic AI detection..."
         );
 
 
@@ -681,10 +847,16 @@ async function detectPest() {
             );
 
 
+        console.log(
+            "========== AI PREDICTIONS =========="
+        );
+
+
         predictions.forEach(
             function (prediction) {
 
                 console.log(
+
                     prediction.className +
                     " : " +
                     (
@@ -692,8 +864,15 @@ async function detectPest() {
                         100
                     ).toFixed(2) +
                     "%"
+
                 );
+
             }
+        );
+
+
+        console.log(
+            "===================================="
         );
 
 
@@ -708,14 +887,15 @@ async function detectPest() {
         ) {
 
             if (
-                predictions[i]
-                    .probability >
+                predictions[i].probability >
                 bestPrediction.probability
             ) {
 
                 bestPrediction =
                     predictions[i];
+
             }
+
         }
 
 
@@ -732,7 +912,15 @@ async function detectPest() {
 
             probability:
                 bestPrediction.probability
+
         };
+
+
+        console.log(
+            "FINAL RESULT:",
+            result.name,
+            result.confidence + "%"
+        );
 
 
         displayResult(result);
@@ -744,21 +932,15 @@ async function detectPest() {
         const isHealthy =
             result.name
                 .trim()
-                .toLowerCase() ===
+                .toLowerCase()
+            ===
             "healthy leaf";
 
 
         if (!isHealthy) {
 
-            await sendEmailAlert(
-                result
-            );
+            await sendEmailAlert(result);
 
-        } else {
-
-            console.log(
-                "Healthy leaf - no alert email."
-            );
         }
 
 
@@ -775,16 +957,34 @@ async function detectPest() {
         );
 
 
+        const status =
+            document.getElementById(
+                "detectionStatus"
+            );
+
+
+        if (status) {
+
+            status.textContent =
+                "Detection Failed";
+
+            status.className =
+                "detection-status status-danger";
+
+        }
+
+
         alert(
             "AI detection failed.\n\n" +
             error.message
         );
 
-
     } finally {
 
         isDetecting = false;
+
     }
+
 }
 
 
@@ -816,6 +1016,7 @@ function showLoading() {
 
         pestName.textContent =
             "Analyzing...";
+
     }
 
 
@@ -823,6 +1024,7 @@ function showLoading() {
 
         confidence.textContent =
             "--";
+
     }
 
 
@@ -833,7 +1035,9 @@ function showLoading() {
 
         status.className =
             "detection-status";
+
     }
+
 }
 
 
@@ -865,6 +1069,7 @@ function displayResult(result) {
 
         pestName.textContent =
             result.name;
+
     }
 
 
@@ -873,19 +1078,21 @@ function displayResult(result) {
         confidence.textContent =
             result.confidence +
             "%";
+
     }
 
 
     if (status) {
 
-        const healthy =
+        const isHealthy =
             result.name
                 .trim()
-                .toLowerCase() ===
+                .toLowerCase()
+            ===
             "healthy leaf";
 
 
-        if (healthy) {
+        if (isHealthy) {
 
             status.textContent =
                 "Healthy Leaf";
@@ -900,125 +1107,11 @@ function displayResult(result) {
 
             status.className =
                 "detection-status status-danger";
-        }
-    }
-}
 
-
-// ============================================================
-// EMAIL ALERT
-// ============================================================
-
-async function sendEmailAlert(result) {
-
-    const savedEmail =
-        localStorage.getItem(
-            "demoAlertEmail"
-        );
-
-
-    if (!savedEmail) {
-
-        console.log(
-            "No demo email saved. Email not sent."
-        );
-
-
-        alert(
-            "Pest detected!\n\n" +
-            "Please enter a demo alert email to receive the email notification."
-        );
-
-
-        return;
-    }
-
-
-    try {
-
-        console.log(
-            "Sending alert email to:",
-            savedEmail
-        );
-
-
-        const response =
-            await emailjs.send(
-
-                EMAIL_SERVICE_ID,
-
-                EMAIL_TEMPLATE_ID,
-
-                {
-
-                    to_email:
-                        savedEmail,
-
-                    pest_name:
-                        result.name,
-
-                    confidence:
-                        result.confidence +
-                        "%",
-
-                    status:
-                        "Pest Detected"
-                }
-            );
-
-
-        console.log(
-            "EmailJS response:",
-            response
-        );
-
-
-        emailAlerts++;
-
-
-        const status =
-            document.getElementById(
-                "emailStatus"
-            );
-
-
-        if (status) {
-
-            status.textContent =
-                "✅ Alert email sent to " +
-                savedEmail;
-
-            status.style.color =
-                "#166534";
         }
 
-
-        updateDashboard();
-
-
-    } catch (error) {
-
-        console.error(
-            "EMAIL ERROR:",
-            error
-        );
-
-
-        const status =
-            document.getElementById(
-                "emailStatus"
-            );
-
-
-        if (status) {
-
-            status.textContent =
-                "❌ Email could not be sent. Check EmailJS template settings.";
-
-            status.style.color =
-                "#991b1b";
-        }
     }
+
 }
 
 
@@ -1046,6 +1139,7 @@ function saveDetection(result) {
 
         time:
             now.toLocaleTimeString()
+
     };
 
 
@@ -1060,6 +1154,7 @@ function saveDetection(result) {
     ) {
 
         detectionHistory.pop();
+
     }
 
 
@@ -1069,17 +1164,250 @@ function saveDetection(result) {
     if (
         result.name
             .trim()
-            .toLowerCase() !==
+            .toLowerCase()
+        !==
         "healthy leaf"
     ) {
 
         activeThreats++;
+
     }
 
 
     updateHistory();
 
     updateAlerts();
+
+}
+
+
+// ============================================================
+// EMAIL ALERT
+// ============================================================
+
+async function sendEmailAlert(result) {
+
+    console.log(
+        "Sending pest email alert..."
+    );
+
+
+    const savedEmail =
+        localStorage.getItem(
+            "demoAlertEmail"
+        );
+
+
+    if (!savedEmail) {
+
+        showEmailMessage(
+            "⚠️ Please save a demo email first."
+        );
+
+
+        alert(
+            "Pest detected!\n\n" +
+            "Please enter and save the Demo Alert Email first."
+        );
+
+
+        return;
+
+    }
+
+
+    console.log(
+        "Sending email to:",
+        savedEmail
+    );
+
+
+    try {
+
+        const templateParams = {
+
+            /*
+             * IMPORTANT:
+             * EmailJS template To Email must be:
+             *
+             * {{to_email}}
+             */
+
+            to_email:
+                savedEmail,
+
+            pest_name:
+                result.name,
+
+            confidence:
+                result.confidence +
+                "%",
+
+            status:
+                "Pest Detected"
+
+        };
+
+
+        console.log(
+            "EmailJS template parameters:",
+            templateParams
+        );
+
+
+        const response =
+            await emailjs.send(
+
+                EMAIL_SERVICE_ID,
+
+                EMAIL_TEMPLATE_ID,
+
+                templateParams
+
+            );
+
+
+        console.log(
+            "EmailJS response:",
+            response
+        );
+
+
+        if (
+            response &&
+            response.status === 200
+        ) {
+
+            emailAlerts++;
+
+
+            updateDashboard();
+
+
+            console.log(
+                "Email alert sent successfully."
+            );
+
+
+            showEmailMessage(
+                "📧 Alert email sent to " +
+                savedEmail
+            );
+
+
+        } else {
+
+            showEmailMessage(
+                "⚠️ EmailJS returned an unexpected response."
+            );
+
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "EMAILJS ERROR:",
+            error
+        );
+
+
+        const errorMessage =
+            error?.text ||
+            error?.message ||
+            "Unknown EmailJS error";
+
+
+        console.error(
+            "EmailJS status:",
+            error?.status
+        );
+
+
+        showEmailMessage(
+            "❌ Email failed: " +
+            errorMessage
+        );
+
+
+        alert(
+            "Email could not be sent.\n\n" +
+            "EmailJS error:\n" +
+            errorMessage
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// EMAIL MESSAGE
+// ============================================================
+
+function showEmailMessage(message) {
+
+    const status =
+        document.getElementById(
+            "detectionStatus"
+        );
+
+
+    if (!status) return;
+
+
+    status.textContent =
+        message;
+
+
+    status.className =
+        "detection-status";
+
+
+    setTimeout(
+        function () {
+
+            const pestName =
+                document.getElementById(
+                    "pestName"
+                );
+
+
+            if (!pestName) return;
+
+
+            const currentResult =
+                pestName.textContent;
+
+
+            if (
+                currentResult
+                    .trim()
+                    .toLowerCase()
+                ===
+                "healthy leaf"
+            ) {
+
+                status.textContent =
+                    "Healthy Leaf";
+
+                status.className =
+                    "detection-status status-safe";
+
+            } else {
+
+                status.textContent =
+                    "Pest Detected";
+
+                status.className =
+                    "detection-status status-danger";
+
+            }
+
+        },
+        6000
+    );
+
 }
 
 
@@ -1111,6 +1439,7 @@ function updateDashboard() {
 
         total.textContent =
             totalDetections;
+
     }
 
 
@@ -1118,6 +1447,7 @@ function updateDashboard() {
 
         threats.textContent =
             activeThreats;
+
     }
 
 
@@ -1125,7 +1455,9 @@ function updateDashboard() {
 
         emails.textContent =
             emailAlerts;
+
     }
+
 }
 
 
@@ -1157,16 +1489,33 @@ function updateHistory() {
 
 
             row.innerHTML = `
-                <td>${item.date}</td>
-                <td>${item.time}</td>
-                <td>${item.pest}</td>
-                <td>${item.confidence}</td>
+
+                <td>
+                    ${item.date}
+                </td>
+
+                <td>
+                    ${item.time}
+                </td>
+
+                <td>
+                    ${item.pest}
+                </td>
+
+                <td>
+                    ${item.confidence}
+                </td>
+
             `;
 
 
-            body.appendChild(row);
+            body.appendChild(
+                row
+            );
+
         }
     );
+
 }
 
 
@@ -1185,37 +1534,45 @@ function updateAlerts() {
     if (!container) return;
 
 
-    const alerts =
+    const pestAlerts =
         detectionHistory.filter(
             function (item) {
 
                 return (
+
                     item.pest
                         .trim()
-                        .toLowerCase() !==
+                        .toLowerCase()
+                    !==
                     "healthy leaf"
+
                 );
+
             }
         );
 
 
     if (
-        alerts.length === 0
+        pestAlerts.length === 0
     ) {
 
-        container.innerHTML =
-            `<div class="empty-state">
+        container.innerHTML = `
+
+            <div class="empty-state">
                 No pest alerts yet.
-            </div>`;
+            </div>
+
+        `;
 
         return;
+
     }
 
 
     container.innerHTML = "";
 
 
-    alerts
+    pestAlerts
         .slice(0, 5)
         .forEach(
             function (item) {
@@ -1231,6 +1588,7 @@ function updateAlerts() {
 
 
                 div.innerHTML = `
+
                     <strong>
                         ⚠️ ${item.pest}
                     </strong>
@@ -1244,14 +1602,17 @@ function updateAlerts() {
                         ${item.date}
                         ${item.time}
                     </small>
+
                 `;
 
 
                 container.appendChild(
                     div
                 );
+
             }
         );
+
 }
 
 
@@ -1275,8 +1636,13 @@ function updateCharts() {
 
     if (
         !pestCanvas ||
-        !trendCanvas
-    ) return;
+        !trendCanvas ||
+        typeof Chart === "undefined"
+    ) {
+
+        return;
+
+    }
 
 
     const counts = {};
@@ -1286,10 +1652,13 @@ function updateCharts() {
         function (item) {
 
             if (
+
                 item.pest
                     .trim()
-                    .toLowerCase() !==
+                    .toLowerCase()
+                !==
                 "healthy leaf"
+
             ) {
 
                 if (
@@ -1298,11 +1667,14 @@ function updateCharts() {
 
                     counts[item.pest] =
                         0;
+
                 }
 
 
                 counts[item.pest]++;
+
             }
+
         }
     );
 
@@ -1318,6 +1690,7 @@ function updateCharts() {
     if (pestChart) {
 
         pestChart.destroy();
+
     }
 
 
@@ -1326,33 +1699,36 @@ function updateCharts() {
             pestCanvas,
             {
 
-                type: "bar",
+                type:
+                    "bar",
 
                 data: {
 
                     labels:
                         labels,
 
-                    datasets: [
+                    datasets: [{
 
-                        {
+                        label:
+                            "Pest Detections",
 
-                            label:
-                                "Pest Detections",
+                        data:
+                            values
 
-                            data:
-                                values
-                        }
-                    ]
+                    }]
+
                 },
 
                 options: {
 
-                    responsive: true,
+                    responsive:
+                        true,
 
                     maintainAspectRatio:
                         false
+
                 }
+
             }
         );
 
@@ -1365,6 +1741,7 @@ function updateCharts() {
                 function (item) {
 
                     return item.time;
+
                 }
             );
 
@@ -1374,9 +1751,13 @@ function updateCharts() {
             .slice()
             .reverse()
             .map(
-                function (item, index) {
+                function (
+                    item,
+                    index
+                ) {
 
                     return index + 1;
+
                 }
             );
 
@@ -1384,6 +1765,7 @@ function updateCharts() {
     if (trendChart) {
 
         trendChart.destroy();
+
     }
 
 
@@ -1392,38 +1774,42 @@ function updateCharts() {
             trendCanvas,
             {
 
-                type: "line",
+                type:
+                    "line",
 
                 data: {
 
                     labels:
                         trendLabels,
 
-                    datasets: [
+                    datasets: [{
 
-                        {
+                        label:
+                            "Detection Trend",
 
-                            label:
-                                "Detection Trend",
+                        data:
+                            trendValues,
 
-                            data:
-                                trendValues,
+                        tension:
+                            0.3
 
-                            tension:
-                                0.3
-                        }
-                    ]
+                    }]
+
                 },
 
                 options: {
 
-                    responsive: true,
+                    responsive:
+                        true,
 
                     maintainAspectRatio:
                         false
+
                 }
+
             }
         );
+
 }
 
 
@@ -1461,6 +1847,7 @@ function updateSensorDisplay() {
 
         temperature.textContent =
             "-- °C";
+
     }
 
 
@@ -1468,6 +1855,7 @@ function updateSensorDisplay() {
 
         humidity.textContent =
             "-- %";
+
     }
 
 
@@ -1475,6 +1863,7 @@ function updateSensorDisplay() {
 
         distance.textContent =
             "-- cm";
+
     }
 
 
@@ -1482,7 +1871,9 @@ function updateSensorDisplay() {
 
         irStatus.textContent =
             "Waiting";
+
     }
+
 }
 
 
@@ -1511,6 +1902,7 @@ const translations = {
 
         history:
             "History"
+
     },
 
 
@@ -1533,9 +1925,15 @@ const translations = {
 
         history:
             "வரலாறு"
+
     }
+
 };
 
+
+// ============================================================
+// LANGUAGE SETUP
+// ============================================================
 
 function setupLanguage() {
 
@@ -1555,14 +1953,14 @@ function setupLanguage() {
             changeLanguage(
                 selector.value
             );
+
         }
     );
+
 }
 
 
-function changeLanguage(
-    language
-) {
+function changeLanguage(language) {
 
     const elements =
         document.querySelectorAll(
@@ -1586,9 +1984,12 @@ function changeLanguage(
 
                 element.textContent =
                     translations[language][key];
+
             }
+
         }
     );
+
 }
 
 
@@ -1626,19 +2027,25 @@ function setupNavigation() {
                     if (section) {
 
                         section.scrollIntoView({
+
                             behavior:
                                 "smooth"
+
                         });
+
                     }
+
                 }
             );
+
         }
     );
+
 }
 
 
 // ============================================================
-// CLEANUP
+// CAMERA CLEANUP
 // ============================================================
 
 window.addEventListener(
@@ -1646,5 +2053,6 @@ window.addEventListener(
     function () {
 
         stopCamera();
+
     }
 );
