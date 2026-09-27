@@ -57,6 +57,659 @@ let trendChart = null;
 
 let emailJSReady = false;
 
+let currentLanguage =
+  localStorage.getItem("dashboardLanguage") || "en";
+
+
+/* =========================
+   TRANSLATIONS
+========================= */
+
+const translations = {
+
+  en: {
+
+    brandSub: "Smart Farming",
+
+    dashboard: "Dashboard",
+    aiDetection: "AI Detection",
+    alerts: "Alerts",
+    analytics: "Analytics",
+    sensors: "Sensors",
+    history: "History",
+
+    project: "PROJECT",
+
+    topbarSmall: "AI AGRICULTURE MONITORING",
+    title: "Smart Pest Detection Dashboard",
+    systemOnline: "System Online",
+
+    heroLabel: "AI POWERED AGRICULTURE",
+    heroTitle: "AI Smart Pest Detection<br>& Alert System",
+    heroDescription:
+      "Detect crop pests instantly using AI image classification and receive email alerts for faster action.",
+    startDetection: "Start Detection",
+
+    team16: "Team 16:",
+
+    totalDetections: "Total Detections",
+    activeThreats: "Active Threats",
+    emailAlerts: "Email Alerts",
+    aiModel: "AI Model",
+    loading: "Loading...",
+    ready: "Ready",
+    error: "Error",
+
+    aiVision: "AI VISION",
+    aiPestDetection: "AI Pest Detection",
+    cameraUploadDescription:
+      "Use your camera or upload a crop image for AI classification.",
+
+    cameraDetection: "Camera Detection",
+    cameraDescription: "Use your phone or laptop camera.",
+    cameraPreview: "Camera preview",
+    startCamera: "Start Camera",
+    capture: "Capture",
+    stop: "Stop",
+
+    imageUpload: "Image Upload",
+    imageUploadDescription:
+      "Upload a clear crop or leaf image.",
+    chooseImage: "Choose an image",
+    imageTypes: "JPG, JPEG or PNG",
+
+    aiResult: "AI RESULT",
+    waitingImage: "Waiting for image...",
+    confidence: "Confidence",
+
+    classPredictionScores: "Class Prediction Scores",
+    classPredictionDescription:
+      "Confidence score for every trained class.",
+    detectImageScores:
+      "Detect an image to view class scores.",
+
+    notifications: "NOTIFICATIONS",
+    emailAlertsTitle: "Email Alerts",
+    emailAlertsDescription:
+      "Save an email address to receive pest detection alerts.",
+
+    alertEmailConfiguration: "Alert Email Configuration",
+    alertEmailDescription:
+      "Enter the email address where pest alerts should be sent.",
+    emailPlaceholder: "Enter email address",
+    saveEmail: "Save Email",
+    testEmail: "Test Email",
+    noEmailSaved: "No email saved yet.",
+
+    recentAlerts: "Recent Alerts",
+    recentAlertsDescription:
+      "Latest pest detection notifications.",
+    alert: "Alert",
+    alertsPlural: "Alerts",
+    noAlerts: "No alerts yet.",
+    detectedPestsAppear:
+      "Detected pests will appear here.",
+
+    dataInsights: "DATA INSIGHTS",
+    analyticsTitle: "Analytics",
+    analyticsDescription:
+      "View individual pest detection counts and detection trends.",
+
+    pestDetectionCounts: "Pest Detection Counts",
+    pestDetectionCountsDescription:
+      "Each pest class shown separately.",
+    detectionTrend: "Detection Trend",
+    detectionTrendDescription:
+      "Recent AI detection activity.",
+    detections: "Detections",
+
+    hardware: "HARDWARE",
+    sensorMonitoring: "Sensor Monitoring",
+    sensorDescription:
+      "Hardware sensor values will appear after ESP32 connection.",
+    hardwareNotConnected: "Hardware Not Connected",
+
+    temperature: "Temperature",
+    waitingDHT11: "Waiting for DHT11",
+    humidity: "Humidity",
+    cropStatus: "Crop Status",
+    pending: "Pending",
+    aiImageBased: "AI image based",
+    esp32: "ESP32",
+    offline: "Offline",
+    hardwareSetupPending: "Hardware setup pending",
+
+    records: "RECORDS",
+    detectionHistory: "Detection History",
+    historyDescription:
+      "All AI detections are recorded independently of email status.",
+    clearHistory: "Clear History",
+    noHistory: "No detection history yet.",
+    runDetection:
+      "Run an AI detection to create a record.",
+
+    healthy: "Healthy",
+    emailSent: "Email Sent",
+    emailPendingFailed: "Email Pending/Failed",
+    confidenceText: "confidence",
+    unknownTime: "Unknown time",
+
+    footerProject:
+      "AI Smart Pest Detection & Alert System",
+    footerText:
+      "Smart Agriculture • AI • ESP32",
+
+    cameraCouldNotStart:
+      "Camera could not start: ",
+    modelStillLoading:
+      "AI model is still loading. Please wait a moment and try again.",
+    predictionFailed:
+      "Prediction failed: ",
+
+    emailLibraryError:
+      "EmailJS library is not loaded. Check your internet connection and reload.",
+    emailInitializationFailed:
+      "EmailJS initialization failed: ",
+    emailSaved:
+      "Email saved: ",
+    pleaseEnterEmail:
+      "Please enter an email address.",
+    validEmail:
+      "Please enter a valid email address.",
+    emailSavedSuccessfully:
+      "Email saved successfully: ",
+    savedEmail:
+      "Saved email: ",
+    enterSaveEmail:
+      "Enter and save an email address first.",
+    emailNotReady:
+      "EmailJS is not ready. Please reload the page.",
+    sendingTestEmail:
+      "Sending test email...",
+    testEmailSuccess:
+      "Test email sent successfully to ",
+    unexpectedEmailResponse:
+      "EmailJS returned an unexpected response.",
+    testEmailFailed:
+      "Test email failed. Service ID: ",
+    pestSendingEmail:
+      "Pest detected. Sending email alert...",
+    pestAlertSuccess:
+      "Pest alert sent successfully to ",
+    pestEmailFailed:
+      "Pest detected, but email failed. ",
+    pestEmailNotReady:
+      "Pest detected, but EmailJS is not ready.",
+    noEmailAddress:
+      "No email address saved.",
+    emailSentSuccessfully:
+      "Email sent successfully",
+    emailAlertFailed:
+      "Email alert failed: unexpected EmailJS response.",
+
+    clearHistoryConfirm:
+      "Clear all detection history?",
+
+    healthyNoEmail:
+      "No email required for healthy leaf.",
+    emailPending:
+      "Email pending",
+    emailPendingShort:
+      "Email pending",
+
+    languageEnglish: "English",
+    languageTamil: "Tamil"
+  },
+
+
+  ta: {
+
+    brandSub: "சிறந்த விவசாயம்",
+
+    dashboard: "முகப்பு",
+    aiDetection: "AI கண்டறிதல்",
+    alerts: "எச்சரிக்கைகள்",
+    analytics: "பகுப்பாய்வு",
+    sensors: "சென்சார்கள்",
+    history: "வரலாறு",
+
+    project: "திட்டம்",
+
+    topbarSmall: "AI விவசாய கண்காணிப்பு",
+    title: "ஸ்மார்ட் பூச்சி கண்டறிதல் டாஷ்போர்டு",
+    systemOnline: "சிஸ்டம் இயங்குகிறது",
+
+    heroLabel: "AI தொழில்நுட்ப விவசாயம்",
+    heroTitle: "AI ஸ்மார்ட் பூச்சி கண்டறிதல்<br>மற்றும் எச்சரிக்கை அமைப்பு",
+    heroDescription:
+      "AI பட பகுப்பாய்வு மூலம் பயிர் பூச்சிகளை கண்டறிந்து, விரைவான நடவடிக்கைக்காக மின்னஞ்சல் எச்சரிக்கைகளைப் பெறலாம்.",
+    startDetection: "கண்டறிதலை தொடங்கு",
+
+    team16: "குழு 16:",
+
+    totalDetections: "மொத்த கண்டறிதல்கள்",
+    activeThreats: "செயலில் உள்ள அச்சுறுத்தல்கள்",
+    emailAlerts: "மின்னஞ்சல் எச்சரிக்கைகள்",
+    aiModel: "AI மாடல்",
+    loading: "ஏற்றப்படுகிறது...",
+    ready: "தயார்",
+    error: "பிழை",
+
+    aiVision: "AI பார்வை",
+    aiPestDetection: "AI பூச்சி கண்டறிதல்",
+    cameraUploadDescription:
+      "கேமராவைப் பயன்படுத்தவும் அல்லது பயிர் படத்தை பதிவேற்றி AI மூலம் கண்டறியவும்.",
+
+    cameraDetection: "கேமரா கண்டறிதல்",
+    cameraDescription: "உங்கள் மொபைல் அல்லது லேப்டாப் கேமராவைப் பயன்படுத்தவும்.",
+    cameraPreview: "கேமரா முன்னோட்டம்",
+    startCamera: "கேமராவை தொடங்கு",
+    capture: "படம் எடு",
+    stop: "நிறுத்து",
+
+    imageUpload: "படம் பதிவேற்றம்",
+    imageUploadDescription:
+      "தெளிவான பயிர் அல்லது இலை படத்தை பதிவேற்றவும்.",
+    chooseImage: "படத்தை தேர்வு செய்க",
+    imageTypes: "JPG, JPEG அல்லது PNG",
+
+    aiResult: "AI முடிவு",
+    waitingImage: "படத்திற்காக காத்திருக்கிறது...",
+    confidence: "நம்பகத்தன்மை",
+
+    classPredictionScores: "வகை கணிப்பு மதிப்பெண்கள்",
+    classPredictionDescription:
+      "பயிற்சி பெற்ற ஒவ்வொரு வகைக்கும் நம்பகத்தன்மை மதிப்பெண்.",
+    detectImageScores:
+      "வகை மதிப்பெண்களை பார்க்க ஒரு படத்தை கண்டறியவும்.",
+
+    notifications: "அறிவிப்புகள்",
+    emailAlertsTitle: "மின்னஞ்சல் எச்சரிக்கைகள்",
+    emailAlertsDescription:
+      "பூச்சி கண்டறிதல் எச்சரிக்கைகளைப் பெற மின்னஞ்சல் முகவரியை சேமிக்கவும்.",
+
+    alertEmailConfiguration: "எச்சரிக்கை மின்னஞ்சல் அமைப்பு",
+    alertEmailDescription:
+      "பூச்சி எச்சரிக்கைகள் அனுப்ப வேண்டிய மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
+    emailPlaceholder: "மின்னஞ்சல் முகவரியை உள்ளிடவும்",
+    saveEmail: "மின்னஞ்சலை சேமி",
+    testEmail: "சோதனை மின்னஞ்சல்",
+    noEmailSaved: "மின்னஞ்சல் இன்னும் சேமிக்கப்படவில்லை.",
+
+    recentAlerts: "சமீபத்திய எச்சரிக்கைகள்",
+    recentAlertsDescription:
+      "சமீபத்திய பூச்சி கண்டறிதல் அறிவிப்புகள்.",
+    alert: "எச்சரிக்கை",
+    alertsPlural: "எச்சரிக்கைகள்",
+    noAlerts: "எச்சரிக்கைகள் எதுவும் இல்லை.",
+    detectedPestsAppear:
+      "கண்டறியப்பட்ட பூச்சிகள் இங்கே தோன்றும்.",
+
+    dataInsights: "தரவு பகுப்பாய்வு",
+    analyticsTitle: "பகுப்பாய்வு",
+    analyticsDescription:
+      "பூச்சி கண்டறிதல் எண்ணிக்கைகள் மற்றும் கண்டறிதல் போக்குகளைப் பார்க்கவும்.",
+
+    pestDetectionCounts: "பூச்சி கண்டறிதல் எண்ணிக்கைகள்",
+    pestDetectionCountsDescription:
+      "ஒவ்வொரு பூச்சி வகையும் தனித்தனியாக காட்டப்படும்.",
+    detectionTrend: "கண்டறிதல் போக்கு",
+    detectionTrendDescription:
+      "சமீபத்திய AI கண்டறிதல் செயல்பாடு.",
+    detections: "கண்டறிதல்கள்",
+
+    hardware: "வன்பொருள்",
+    sensorMonitoring: "சென்சார் கண்காணிப்பு",
+    sensorDescription:
+      "ESP32 இணைக்கப்பட்ட பிறகு வன்பொருள் சென்சார் மதிப்புகள் தோன்றும்.",
+    hardwareNotConnected: "வன்பொருள் இணைக்கப்படவில்லை",
+
+    temperature: "வெப்பநிலை",
+    waitingDHT11: "DHT11 க்காக காத்திருக்கிறது",
+    humidity: "ஈரப்பதம்",
+    cropStatus: "பயிர் நிலை",
+    pending: "நிலுவையில்",
+    aiImageBased: "AI படத்தை அடிப்படையாகக் கொண்டது",
+    esp32: "ESP32",
+    offline: "ஆஃப்லைன்",
+    hardwareSetupPending: "வன்பொருள் அமைப்பு நிலுவையில் உள்ளது",
+
+    records: "பதிவுகள்",
+    detectionHistory: "கண்டறிதல் வரலாறு",
+    historyDescription:
+      "மின்னஞ்சல் நிலையைப் பொருட்படுத்தாமல் அனைத்து AI கண்டறிதல்களும் பதிவு செய்யப்படும்.",
+    clearHistory: "வரலாற்றை அழி",
+    noHistory: "கண்டறிதல் வரலாறு இன்னும் இல்லை.",
+    runDetection:
+      "பதிவை உருவாக்க AI கண்டறிதலை இயக்கவும்.",
+
+    healthy: "ஆரோக்கியமானது",
+    emailSent: "மின்னஞ்சல் அனுப்பப்பட்டது",
+    emailPendingFailed: "மின்னஞ்சல் நிலுவையில் / தோல்வி",
+    confidenceText: "நம்பகத்தன்மை",
+    unknownTime: "நேரம் தெரியவில்லை",
+
+    footerProject:
+      "AI ஸ்மார்ட் பூச்சி கண்டறிதல் மற்றும் எச்சரிக்கை அமைப்பு",
+    footerText:
+      "ஸ்மார்ட் விவசாயம் • AI • ESP32",
+
+    cameraCouldNotStart:
+      "கேமராவை தொடங்க முடியவில்லை: ",
+    modelStillLoading:
+      "AI மாடல் இன்னும் ஏற்றப்படுகிறது. சிறிது நேரம் காத்திருந்து மீண்டும் முயற்சிக்கவும்.",
+    predictionFailed:
+      "கணிப்பு தோல்வியடைந்தது: ",
+
+    emailLibraryError:
+      "EmailJS library ஏற்றப்படவில்லை. இணைய இணைப்பை சரிபார்த்து பக்கத்தை மீண்டும் ஏற்றவும்.",
+    emailInitializationFailed:
+      "EmailJS தொடங்குவதில் பிழை: ",
+    emailSaved:
+      "மின்னஞ்சல் சேமிக்கப்பட்டது: ",
+    pleaseEnterEmail:
+      "மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
+    validEmail:
+      "சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
+    emailSavedSuccessfully:
+      "மின்னஞ்சல் வெற்றிகரமாக சேமிக்கப்பட்டது: ",
+    savedEmail:
+      "சேமிக்கப்பட்ட மின்னஞ்சல்: ",
+    enterSaveEmail:
+      "முதலில் மின்னஞ்சல் முகவரியை உள்ளிட்டு சேமிக்கவும்.",
+    emailNotReady:
+      "EmailJS தயாராக இல்லை. பக்கத்தை மீண்டும் ஏற்றவும்.",
+    sendingTestEmail:
+      "சோதனை மின்னஞ்சல் அனுப்பப்படுகிறது...",
+    testEmailSuccess:
+      "சோதனை மின்னஞ்சல் வெற்றிகரமாக அனுப்பப்பட்டது: ",
+    unexpectedEmailResponse:
+      "EmailJS எதிர்பாராத பதிலை வழங்கியது.",
+    testEmailFailed:
+      "சோதனை மின்னஞ்சல் தோல்வியடைந்தது. Service ID: ",
+    pestSendingEmail:
+      "பூச்சி கண்டறியப்பட்டது. மின்னஞ்சல் எச்சரிக்கை அனுப்பப்படுகிறது...",
+    pestAlertSuccess:
+      "பூச்சி எச்சரிக்கை வெற்றிகரமாக அனுப்பப்பட்டது: ",
+    pestEmailFailed:
+      "பூச்சி கண்டறியப்பட்டது, ஆனால் மின்னஞ்சல் அனுப்பப்படவில்லை. ",
+    pestEmailNotReady:
+      "பூச்சி கண்டறியப்பட்டது, ஆனால் EmailJS தயாராக இல்லை.",
+    noEmailAddress:
+      "மின்னஞ்சல் முகவரி சேமிக்கப்படவில்லை.",
+    emailSentSuccessfully:
+      "மின்னஞ்சல் வெற்றிகரமாக அனுப்பப்பட்டது",
+    emailAlertFailed:
+      "மின்னஞ்சல் எச்சரிக்கை தோல்வியடைந்தது.",
+
+    clearHistoryConfirm:
+      "அனைத்து கண்டறிதல் வரலாற்றையும் அழிக்க வேண்டுமா?",
+
+    healthyNoEmail:
+      "ஆரோக்கியமான இலைக்கு மின்னஞ்சல் தேவையில்லை.",
+    emailPending:
+      "மின்னஞ்சல் நிலுவையில் உள்ளது",
+    emailPendingShort:
+      "மின்னஞ்சல் நிலுவையில்",
+
+    languageEnglish: "ஆங்கிலம்",
+    languageTamil: "தமிழ்"
+  }
+
+};
+
+
+function t(key) {
+
+  return (
+    translations[currentLanguage]?.[key] ||
+    translations.en[key] ||
+    key
+  );
+
+}
+
+
+/* =========================
+   APPLY LANGUAGE
+========================= */
+
+function setupLanguage() {
+
+  const selector =
+    document.getElementById("languageSelector");
+
+  if (!selector) return;
+
+  selector.value = currentLanguage;
+
+  applyLanguage();
+
+  selector.addEventListener("change", () => {
+
+    currentLanguage = selector.value;
+
+    localStorage.setItem(
+      "dashboardLanguage",
+      currentLanguage
+    );
+
+    applyLanguage();
+
+    renderHistory();
+    renderAlerts();
+    updatePestChart();
+    updateTrendChart();
+
+    if (savedEmail) {
+
+      showEmailStatus(
+        t("savedEmail") + savedEmail,
+        "success"
+      );
+
+    } else {
+
+      showEmailStatus(
+        t("noEmailSaved"),
+        ""
+      );
+
+    }
+
+  });
+
+}
+
+
+function applyLanguage() {
+
+  const selector =
+    document.getElementById("languageSelector");
+
+  if (selector) {
+
+    selector.options[0].text =
+      t("languageEnglish");
+
+    selector.options[1].text =
+      t("languageTamil");
+
+  }
+
+
+  const textMap = {
+
+    ".brand span": "brandSub",
+
+    ".nav-link:nth-child(1) span": "dashboard",
+    ".nav-link:nth-child(2) span": "aiDetection",
+    ".nav-link:nth-child(3) span": "alerts",
+    ".nav-link:nth-child(4) span": "analytics",
+    ".nav-link:nth-child(5) span": "sensors",
+    ".nav-link:nth-child(6) span": "history",
+
+    ".team-badge span": "project",
+
+    ".topbar-small": "topbarSmall",
+    ".topbar h1": "title",
+
+    ".status-pill": "systemOnline",
+
+    ".hero-label": "heroLabel",
+    ".hero-card h2": "heroTitle",
+    "#heroDescription": "heroDescription",
+    ".hero-button": "startDetection",
+
+    ".stats-grid .stat-card:nth-child(1) span": "totalDetections",
+    ".stats-grid .stat-card:nth-child(2) span": "activeThreats",
+    ".stats-grid .stat-card:nth-child(3) span": "emailAlerts",
+    ".stats-grid .stat-card:nth-child(4) span": "aiModel",
+
+    "#detection .section-kicker": "aiVision",
+    "#detection .section-heading h2": "aiPestDetection",
+    "#detection .section-heading > div > p:last-child": "cameraUploadDescription",
+
+    "#detection .panel:nth-child(1) .panel-header h3": "cameraDetection",
+    "#detection .panel:nth-child(1) .panel-header p": "cameraDescription",
+    "#cameraPlaceholder span": "cameraPreview",
+    "#startCamera": "startCamera",
+    "#captureImage": "capture",
+    "#stopCamera": "stop",
+
+    "#detection .panel:nth-child(2) .panel-header h3": "imageUpload",
+    "#detection .panel:nth-child(2) .panel-header p": "imageUploadDescription",
+    ".upload-box strong": "chooseImage",
+    ".upload-box span": "imageTypes",
+
+    ".prediction-main span": "aiResult",
+    ".confidence-box span": "confidence",
+
+    ".prediction-scores-panel .panel-header h3": "classPredictionScores",
+    ".prediction-scores-panel .panel-header p": "classPredictionDescription",
+
+    "#alerts .section-kicker": "notifications",
+    "#alerts .section-heading h2": "emailAlertsTitle",
+    "#alerts .section-heading > div > p:last-child": "emailAlertsDescription",
+
+    ".email-content h3": "alertEmailConfiguration",
+    ".email-content > p": "alertEmailDescription",
+
+    "#saveEmail": "saveEmail",
+    "#testEmail": "testEmail",
+
+    "#alerts .alert-panel .panel-header h3": "recentAlerts",
+    "#alerts .alert-panel .panel-header p": "recentAlertsDescription",
+
+    "#analytics .section-kicker": "dataInsights",
+    "#analytics .section-heading h2": "analyticsTitle",
+    "#analytics .section-heading > div > p:last-child": "analyticsDescription",
+
+    ".charts-grid .panel:nth-child(1) .panel-header h3": "pestDetectionCounts",
+    ".charts-grid .panel:nth-child(1) .panel-header p": "pestDetectionCountsDescription",
+
+    ".charts-grid .panel:nth-child(2) .panel-header h3": "detectionTrend",
+    ".charts-grid .panel:nth-child(2) .panel-header p": "detectionTrendDescription",
+
+    "#sensors .section-kicker": "hardware",
+    "#sensors .section-heading h2": "sensorMonitoring",
+    "#sensors .section-heading > div > p:last-child": "sensorDescription",
+
+    ".sensor-card:nth-child(1) span": "temperature",
+    ".sensor-card:nth-child(1) small": "waitingDHT11",
+
+    ".sensor-card:nth-child(2) span": "humidity",
+    ".sensor-card:nth-child(2) small": "waitingDHT11",
+
+    ".sensor-card:nth-child(3) span": "cropStatus",
+    ".sensor-card:nth-child(3) strong": "pending",
+    ".sensor-card:nth-child(3) small": "aiImageBased",
+
+    ".sensor-card:nth-child(4) span": "esp32",
+    ".sensor-card:nth-child(4) strong": "offline",
+    ".sensor-card:nth-child(4) small": "hardwareSetupPending",
+
+    "#history .section-kicker": "records",
+    "#history .section-heading h2": "detectionHistory",
+    "#history .section-heading > div > p:last-child": "historyDescription",
+    "#clearHistory": "clearHistory",
+
+    "footer div span": "footerProject",
+    "footer > span": "footerText"
+
+  };
+
+
+  Object.entries(textMap).forEach(
+    ([selector, key]) => {
+
+      const elements =
+        document.querySelectorAll(selector);
+
+      elements.forEach(element => {
+
+        if (key === "heroTitle") {
+
+          element.innerHTML = t(key);
+
+        } else {
+
+          element.textContent = t(key);
+
+        }
+
+      });
+
+    }
+  );
+
+
+  const emailInput =
+    document.getElementById("alertEmail");
+
+  if (emailInput) {
+
+    emailInput.placeholder =
+      t("emailPlaceholder");
+
+  }
+
+
+  const modelStatus =
+    document.getElementById("modelStatus");
+
+  if (modelStatus) {
+
+    if (modelStatus.textContent === "Loading..." ||
+        modelStatus.textContent === "ஏற்றப்படுகிறது..." ||
+        modelStatus.textContent === "Loading") {
+
+      modelStatus.textContent =
+        t("loading");
+
+    }
+
+  }
+
+
+  const predictionName =
+    document.getElementById("predictionName");
+
+  if (
+    predictionName &&
+    (
+      predictionName.textContent === "Waiting for image..." ||
+      predictionName.textContent === "படத்திற்காக காத்திருக்கிறது..."
+    )
+  ) {
+
+    predictionName.textContent =
+      t("waitingImage");
+
+  }
+
+}
+
 
 /* =========================
    DOM READY
@@ -92,7 +745,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function setupNavigation() {
 
-  const links = document.querySelectorAll(".nav-link");
+  const links =
+    document.querySelectorAll(".nav-link");
 
   links.forEach(link => {
 
@@ -157,36 +811,6 @@ function setupNavigation() {
 
 
 /* =========================
-   LANGUAGE
-========================= */
-
-function setupLanguage() {
-
-  const selector =
-    document.getElementById("languageSelector");
-
-  if (!selector) return;
-
-  selector.addEventListener("change", () => {
-
-    if (selector.value === "ta") {
-
-      document.getElementById("heroDescription").textContent =
-        "AI பட பகுப்பாய்வு மூலம் பயிர் பூச்சிகளை கண்டறிந்து, விரைவான நடவடிக்கைக்காக Email Alert பெறலாம்.";
-
-    } else {
-
-      document.getElementById("heroDescription").textContent =
-        "Detect crop pests instantly using AI image classification and receive email alerts for faster action.";
-
-    }
-
-  });
-
-}
-
-
-/* =========================
    EMAILJS
 ========================= */
 
@@ -197,7 +821,7 @@ function initializeEmailJS() {
     emailJSReady = false;
 
     showEmailStatus(
-      "EmailJS library is not loaded. Check your internet connection and reload.",
+      t("emailLibraryError"),
       "error"
     );
 
@@ -216,7 +840,7 @@ function initializeEmailJS() {
     if (savedEmail) {
 
       showEmailStatus(
-        "Email saved: " + savedEmail,
+        t("emailSaved") + savedEmail,
         "success"
       );
 
@@ -227,7 +851,7 @@ function initializeEmailJS() {
     emailJSReady = false;
 
     showEmailStatus(
-      "EmailJS initialization failed: " +
+      t("emailInitializationFailed") +
       getErrorMessage(error),
       "error"
     );
@@ -261,7 +885,7 @@ function setupEmail() {
     if (!email) {
 
       showEmailStatus(
-        "Please enter an email address.",
+        t("pleaseEnterEmail"),
         "error"
       );
 
@@ -272,7 +896,7 @@ function setupEmail() {
     if (!isValidEmail(email)) {
 
       showEmailStatus(
-        "Please enter a valid email address.",
+        t("validEmail"),
         "error"
       );
 
@@ -288,7 +912,8 @@ function setupEmail() {
     );
 
     showEmailStatus(
-      "Email saved successfully: " + savedEmail,
+      t("emailSavedSuccessfully") +
+      savedEmail,
       "success"
     );
 
@@ -313,7 +938,7 @@ function loadSavedEmail() {
     input.value = savedEmail;
 
     showEmailStatus(
-      "Saved email: " + savedEmail,
+      t("savedEmail") + savedEmail,
       "success"
     );
 
@@ -335,7 +960,7 @@ function sendTestEmail() {
     if (!email) {
 
       showEmailStatus(
-        "Enter and save an email address first.",
+        t("enterSaveEmail"),
         "error"
       );
 
@@ -349,7 +974,7 @@ function sendTestEmail() {
   if (!emailJSReady) {
 
     showEmailStatus(
-      "EmailJS is not ready. Please reload the page.",
+      t("emailNotReady"),
       "error"
     );
 
@@ -359,7 +984,7 @@ function sendTestEmail() {
 
 
   showEmailStatus(
-    "Sending test email...",
+    t("sendingTestEmail"),
     ""
   );
 
@@ -379,7 +1004,7 @@ function sendTestEmail() {
     if (response && response.status === 200) {
 
       showEmailStatus(
-        "Test email sent successfully to " +
+        t("testEmailSuccess") +
         savedEmail,
         "success"
       );
@@ -387,7 +1012,7 @@ function sendTestEmail() {
     } else {
 
       showEmailStatus(
-        "EmailJS returned an unexpected response.",
+        t("unexpectedEmailResponse"),
         "error"
       );
 
@@ -397,7 +1022,7 @@ function sendTestEmail() {
   .catch(error => {
 
     showEmailStatus(
-      "Test email failed. Service ID: " +
+      t("testEmailFailed") +
       EMAIL_SERVICE_ID +
       " | Template ID: " +
       EMAIL_TEMPLATE_ID +
@@ -421,7 +1046,7 @@ function sendPestEmail(
 
     historyRecord.emailSent = false;
     historyRecord.emailMessage =
-      "No email address saved.";
+      t("noEmailAddress");
 
     saveHistory();
 
@@ -437,7 +1062,7 @@ function sendPestEmail(
 
     historyRecord.emailSent = false;
     historyRecord.emailMessage =
-      "EmailJS is not ready.";
+      t("emailNotReady");
 
     saveHistory();
 
@@ -445,7 +1070,7 @@ function sendPestEmail(
     renderAlerts();
 
     showEmailStatus(
-      "Pest detected, but EmailJS is not ready.",
+      t("pestEmailNotReady"),
       "error"
     );
 
@@ -455,7 +1080,7 @@ function sendPestEmail(
 
 
   showEmailStatus(
-    "Pest detected. Sending email alert...",
+    t("pestSendingEmail"),
     ""
   );
 
@@ -476,7 +1101,7 @@ function sendPestEmail(
 
       historyRecord.emailSent = true;
       historyRecord.emailMessage =
-        "Email sent successfully";
+        t("emailSentSuccessfully");
 
       emailAlerts++;
 
@@ -492,7 +1117,7 @@ function sendPestEmail(
       renderAlerts();
 
       showEmailStatus(
-        "Pest alert sent successfully to " +
+        t("pestAlertSuccess") +
         savedEmail,
         "success"
       );
@@ -501,7 +1126,7 @@ function sendPestEmail(
 
       historyRecord.emailSent = false;
       historyRecord.emailMessage =
-        "EmailJS returned an unexpected response.";
+        t("unexpectedEmailResponse");
 
       saveHistory();
 
@@ -509,7 +1134,7 @@ function sendPestEmail(
       renderAlerts();
 
       showEmailStatus(
-        "Email alert failed: unexpected EmailJS response.",
+        t("emailAlertFailed"),
         "error"
       );
 
@@ -528,7 +1153,7 @@ function sendPestEmail(
     renderAlerts();
 
     showEmailStatus(
-      "Pest detected, but email failed. " +
+      t("pestEmailFailed") +
       getErrorMessage(error),
       "error"
     );
@@ -620,7 +1245,8 @@ async function loadAIModel() {
     maxPredictions =
       model.getTotalClasses();
 
-    status.textContent = "Ready";
+    status.textContent =
+      t("ready");
 
     status.style.color = "#5ddd9b";
 
@@ -631,7 +1257,8 @@ async function loadAIModel() {
       error
     );
 
-    status.textContent = "Error";
+    status.textContent =
+      t("error");
 
     status.style.color = "#ff7f87";
 
@@ -718,7 +1345,7 @@ async function startCamera() {
   } catch (error) {
 
     showEmailStatus(
-      "Camera could not start: " +
+      t("cameraCouldNotStart") +
       error.message,
       "error"
     );
@@ -878,7 +1505,7 @@ async function predictImage(imageElement) {
   if (!model) {
 
     alert(
-      "AI model is still loading. Please wait a moment and try again."
+      t("modelStillLoading")
     );
 
     return;
@@ -973,8 +1600,8 @@ async function predictImage(imageElement) {
 
       emailMessage:
         pestName === "Healthy Leaf"
-          ? "No email required for healthy leaf."
-          : "Email pending"
+          ? t("healthyNoEmail")
+          : t("emailPending")
 
     };
 
@@ -1012,13 +1639,6 @@ async function predictImage(imageElement) {
     );
 
 
-    /*
-      IMPORTANT:
-      History is already saved above.
-      Email sending happens AFTER history creation.
-      So email failure cannot hide the history.
-    */
-
     if (
       pestName !== "Healthy Leaf"
     ) {
@@ -1040,7 +1660,7 @@ async function predictImage(imageElement) {
     );
 
     alert(
-      "Prediction failed: " +
+      t("predictionFailed") +
       error.message
     );
 
@@ -1088,6 +1708,46 @@ function normalizeClassName(name) {
 
 
 /* =========================
+   DISPLAY CLASS NAME
+========================= */
+
+function displayClassName(name) {
+
+  const names = {
+
+    "Aphid":
+      currentLanguage === "ta"
+        ? "அஃபிட்"
+        : "Aphid",
+
+    "Caterpillar":
+      currentLanguage === "ta"
+        ? "கம்பளிப்பூச்சி"
+        : "Caterpillar",
+
+    "Whitefly":
+      currentLanguage === "ta"
+        ? "வெள்ளை ஈ"
+        : "Whitefly",
+
+    "Thrips":
+      currentLanguage === "ta"
+        ? "த்ரிப்ஸ்"
+        : "Thrips",
+
+    "Healthy Leaf":
+      currentLanguage === "ta"
+        ? "ஆரோக்கியமான இலை"
+        : "Healthy Leaf"
+
+  };
+
+  return names[name] || name;
+
+}
+
+
+/* =========================
    SHOW PREDICTION
 ========================= */
 
@@ -1116,7 +1776,7 @@ function showPredictionResult(
   card.classList.remove("hidden");
 
   name.textContent =
-    pestName;
+    displayClassName(pestName);
 
   confidenceText.textContent =
     confidence + "%";
@@ -1159,7 +1819,9 @@ function renderPredictionScores(
 
     row.innerHTML = `
       <div class="score-name">
-        ${escapeHTML(item.name)}
+        ${escapeHTML(
+          displayClassName(item.name)
+        )}
       </div>
 
       <div class="score-bar">
@@ -1219,7 +1881,7 @@ function setupHistory() {
 
       const confirmed =
         confirm(
-          "Clear all detection history?"
+          t("clearHistoryConfirm")
         );
 
 
@@ -1259,8 +1921,8 @@ function renderHistory() {
     container.innerHTML = `
       <div class="empty-history">
         <i class="fa-solid fa-clock-rotate-left"></i>
-        <p>No detection history yet.</p>
-        <span>Run an AI detection to create a record.</span>
+        <p>${t("noHistory")}</p>
+        <span>${t("runDetection")}</span>
       </div>
     `;
 
@@ -1298,7 +1960,9 @@ function renderHistory() {
               <div>
 
                 <strong>
-                  ${escapeHTML(record.name)}
+                  ${escapeHTML(
+                    displayClassName(record.name)
+                  )}
                 </strong>
 
                 <small>
@@ -1314,22 +1978,22 @@ function renderHistory() {
 
               <span>
                 ${record.confidence}%
-                confidence
+                ${t("confidenceText")}
               </span>
 
               ${
                 healthy
                   ? `<span class="email-sent">
-                      Healthy
+                      ${t("healthy")}
                     </span>`
                   : record.emailSent
                     ? `<span class="email-sent">
                         <i class="fa-solid fa-check"></i>
-                        Email Sent
+                        ${t("emailSent")}
                       </span>`
                     : `<span class="email-failed">
                         <i class="fa-solid fa-xmark"></i>
-                        Email Pending/Failed
+                        ${t("emailPendingFailed")}
                       </span>`
               }
 
@@ -1369,9 +2033,12 @@ function renderAlerts() {
 
   badge.textContent =
     pestAlerts.length +
-    (pestAlerts.length === 1
-      ? " Alert"
-      : " Alerts");
+    " " +
+    (
+      pestAlerts.length === 1
+        ? t("alert")
+        : t("alertsPlural")
+    );
 
 
   if (pestAlerts.length === 0) {
@@ -1379,8 +2046,8 @@ function renderAlerts() {
     container.innerHTML = `
       <div class="empty-alerts">
         <i class="fa-solid fa-bell-slash"></i>
-        <p>No alerts yet.</p>
-        <span>Detected pests will appear here.</span>
+        <p>${t("noAlerts")}</p>
+        <span>${t("detectedPestsAppear")}</span>
       </div>
     `;
 
@@ -1406,7 +2073,9 @@ function renderAlerts() {
               <div>
 
                 <strong>
-                  ${escapeHTML(record.name)}
+                  ${escapeHTML(
+                    displayClassName(record.name)
+                  )}
                 </strong>
 
                 <small>
@@ -1421,20 +2090,30 @@ function renderAlerts() {
             <div class="alert-right">
 
               <span>
-                ${record.confidence}% confidence
+                ${record.confidence}%
+                ${t("confidenceText")}
               </span>
 
               ${
                 record.emailSent
                   ? `<span class="email-sent">
                       <i class="fa-solid fa-envelope-circle-check"></i>
-                      Email Sent
+                      ${t("emailSent")}
                     </span>`
                   : `<span class="email-failed">
                       <i class="fa-solid fa-envelope"></i>
                       ${escapeHTML(
-                        record.emailMessage ||
-                        "Email pending"
+                        currentLanguage === "ta"
+                          ? (
+                              record.emailMessage ===
+                              "Email pending"
+                                ? t("emailPendingShort")
+                                : record.emailMessage
+                            )
+                          : (
+                              record.emailMessage ||
+                              t("emailPendingShort")
+                            )
                       )}
                     </span>`
               }
@@ -1521,16 +2200,22 @@ function updatePestChart() {
       data: {
 
         labels: [
-          "Aphid",
-          "Caterpillar",
-          "Whitefly",
-          "Thrips",
-          "Healthy Leaf"
+
+          displayClassName("Aphid"),
+
+          displayClassName("Caterpillar"),
+
+          displayClassName("Whitefly"),
+
+          displayClassName("Thrips"),
+
+          displayClassName("Healthy Leaf")
+
         ],
 
         datasets: [{
 
-          label: "Detections",
+          label: t("detections"),
 
           data: data,
 
@@ -1657,7 +2342,7 @@ function updateTrendChart() {
 
         datasets: [{
 
-          label: "Detections",
+          label: t("detections"),
 
           data: values,
 
@@ -1737,13 +2422,15 @@ function formatDate(value) {
     date.getTime()
   )) {
 
-    return "Unknown time";
+    return t("unknownTime");
 
   }
 
 
   return date.toLocaleString(
-    [],
+    currentLanguage === "ta"
+      ? "ta-IN"
+      : "en-IN",
     {
       day: "2-digit",
       month: "short",
