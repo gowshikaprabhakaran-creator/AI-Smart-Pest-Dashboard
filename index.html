@@ -125,7 +125,10 @@
             AI POWERED AGRICULTURE
           </div>
 
-          <h2>AI Smart Pest Detection<br>& Alert System</h2>
+          <h2>
+            AI Smart Pest Detection<br>
+            & Alert System
+          </h2>
 
           <p id="heroDescription">
             Detect crop pests instantly using AI image classification
@@ -221,7 +224,9 @@
         <div>
           <p class="section-kicker">AI VISION</p>
           <h2>AI Pest Detection</h2>
-          <p>Use your camera or upload a crop image for AI classification.</p>
+          <p>
+            Use your camera or upload a crop image for AI classification.
+          </p>
         </div>
 
         <div class="model-badge">
@@ -238,8 +243,14 @@
 
           <div class="panel-header">
             <div>
-              <h3><i class="fa-solid fa-camera"></i> Camera Detection</h3>
-              <p>Use your phone or laptop camera.</p>
+              <h3>
+                <i class="fa-solid fa-camera"></i>
+                Camera Detection
+              </h3>
+
+              <p>
+                Use your phone or laptop camera.
+              </p>
             </div>
           </div>
 
@@ -251,9 +262,13 @@
               playsinline>
             </video>
 
-            <div id="cameraPlaceholder" class="camera-placeholder">
+            <div
+              id="cameraPlaceholder"
+              class="camera-placeholder">
+
               <i class="fa-solid fa-camera"></i>
               <span>Camera preview</span>
+
             </div>
 
           </div>
@@ -265,14 +280,24 @@
               Start Camera
             </button>
 
-            <button id="captureImage" class="secondary-btn" disabled>
+            <button
+              id="captureImage"
+              class="secondary-btn"
+              disabled>
+
               <i class="fa-solid fa-camera"></i>
               Capture
+
             </button>
 
-            <button id="stopCamera" class="danger-btn" disabled>
+            <button
+              id="stopCamera"
+              class="danger-btn"
+              disabled>
+
               <i class="fa-solid fa-stop"></i>
               Stop
+
             </button>
 
           </div>
@@ -285,16 +310,28 @@
 
           <div class="panel-header">
             <div>
-              <h3><i class="fa-solid fa-cloud-arrow-up"></i> Image Upload</h3>
-              <p>Upload a clear crop or leaf image.</p>
+
+              <h3>
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                Image Upload
+              </h3>
+
+              <p>
+                Upload a clear crop or leaf image.
+              </p>
+
             </div>
           </div>
 
-          <label class="upload-box" for="imageUpload">
+          <label
+            class="upload-box"
+            for="imageUpload">
 
             <i class="fa-solid fa-cloud-arrow-up"></i>
 
-            <strong>Choose an image</strong>
+            <strong>
+              Choose an image
+            </strong>
 
             <span>
               JPG, JPEG or PNG
@@ -309,7 +346,9 @@
           </label>
 
           <div class="uploaded-preview">
-            <img id="uploadedImage" alt="Uploaded crop preview" />
+            <img
+              id="uploadedImage"
+              alt="Uploaded crop preview" />
           </div>
 
         </div>
@@ -318,7 +357,9 @@
 
 
       <!-- RESULT -->
-      <div id="predictionResult" class="prediction-card hidden">
+      <div
+        id="predictionResult"
+        class="prediction-card hidden">
 
         <div class="prediction-main">
 
@@ -327,15 +368,25 @@
           </div>
 
           <div>
+
             <span>AI RESULT</span>
-            <h3 id="predictionName">Waiting for image...</h3>
+
+            <h3 id="predictionName">
+              Waiting for image...
+            </h3>
+
           </div>
 
         </div>
 
         <div class="confidence-box">
+
           <span>Confidence</span>
-          <strong id="predictionConfidence">0%</strong>
+
+          <strong id="predictionConfidence">
+            0%
+          </strong>
+
         </div>
 
       </div>
@@ -345,16 +396,29 @@
       <div class="panel prediction-scores-panel">
 
         <div class="panel-header">
+
           <div>
-            <h3>Class Prediction Scores</h3>
-            <p>Confidence score for every trained class.</p>
+
+            <h3>
+              Class Prediction Scores
+            </h3>
+
+            <p>
+              Confidence score for every trained class.
+            </p>
+
           </div>
+
         </div>
 
-        <div id="predictionScores" class="prediction-scores">
+        <div
+          id="predictionScores"
+          class="prediction-scores">
+
           <div class="score-empty">
             Detect an image to view class scores.
           </div>
+
         </div>
 
       </div>
@@ -366,11 +430,23 @@
     <section id="alerts" class="section">
 
       <div class="section-heading">
+
         <div>
-          <p class="section-kicker">NOTIFICATIONS</p>
-          <h2>Email Alerts</h2>
-          <p>Save an email address to receive pest detection alerts.</p>
+
+          <p class="section-kicker">
+            NOTIFICATIONS
+          </p>
+
+          <h2>
+            Email Alerts
+          </h2>
+
+          <p>
+            Save an email address to receive pest detection alerts.
+          </p>
+
         </div>
+
       </div>
 
 
@@ -382,7 +458,9 @@
 
         <div class="email-content">
 
-          <h3>Alert Email Configuration</h3>
+          <h3>
+            Alert Email Configuration
+          </h3>
 
           <p>
             Enter the email address where pest alerts should be sent.
@@ -396,20 +474,32 @@
               placeholder="Enter email address"
               autocomplete="email" />
 
-            <button id="saveEmail" class="primary-btn">
+            <button
+              id="saveEmail"
+              class="primary-btn">
+
               <i class="fa-solid fa-floppy-disk"></i>
               Save Email
+
             </button>
 
-            <button id="testEmail" class="secondary-btn">
+            <button
+              id="testEmail"
+              class="secondary-btn">
+
               <i class="fa-solid fa-paper-plane"></i>
               Test Email
+
             </button>
 
           </div>
 
-          <div id="emailStatus" class="email-status">
+          <div
+            id="emailStatus"
+            class="email-status">
+
             No email saved yet.
+
           </div>
 
         </div>
@@ -421,20 +511,45 @@
       <div class="panel alert-panel">
 
         <div class="panel-header">
+
           <div>
-            <h3>Recent Alerts</h3>
-            <p>Latest pest detection notifications.</p>
+
+            <h3>
+              Recent Alerts
+            </h3>
+
+            <p>
+              Latest pest detection notifications.
+            </p>
+
           </div>
 
-          <span class="small-badge" id="alertCountBadge">0 Alerts</span>
+          <span
+            class="small-badge"
+            id="alertCountBadge">
+
+            0 Alerts
+
+          </span>
+
         </div>
 
-        <div id="alertsList" class="alerts-list">
+        <div
+          id="alertsList"
+          class="alerts-list">
 
           <div class="empty-alerts">
+
             <i class="fa-solid fa-bell-slash"></i>
-            <p>No alerts yet.</p>
-            <span>Detected pests will appear here.</span>
+
+            <p>
+              No alerts yet.
+            </p>
+
+            <span>
+              Detected pests will appear here.
+            </span>
+
           </div>
 
         </div>
@@ -448,11 +563,23 @@
     <section id="analytics" class="section">
 
       <div class="section-heading">
+
         <div>
-          <p class="section-kicker">DATA INSIGHTS</p>
-          <h2>Analytics</h2>
-          <p>View individual pest detection counts and detection trends.</p>
+
+          <p class="section-kicker">
+            DATA INSIGHTS
+          </p>
+
+          <h2>
+            Analytics
+          </h2>
+
+          <p>
+            View individual pest detection counts and detection trends.
+          </p>
+
         </div>
+
       </div>
 
 
@@ -461,10 +588,19 @@
         <div class="panel">
 
           <div class="panel-header">
+
             <div>
-              <h3>Pest Detection Counts</h3>
-              <p>Each pest class shown separately.</p>
+
+              <h3>
+                Pest Detection Counts
+              </h3>
+
+              <p>
+                Each pest class shown separately.
+              </p>
+
             </div>
+
           </div>
 
           <div class="chart-container">
@@ -477,10 +613,19 @@
         <div class="panel">
 
           <div class="panel-header">
+
             <div>
-              <h3>Detection Trend</h3>
-              <p>Recent AI detection activity.</p>
+
+              <h3>
+                Detection Trend
+              </h3>
+
+              <p>
+                Recent AI detection activity.
+              </p>
+
             </div>
+
           </div>
 
           <div class="chart-container">
@@ -498,16 +643,30 @@
     <section id="sensors" class="section">
 
       <div class="section-heading">
+
         <div>
-          <p class="section-kicker">HARDWARE</p>
-          <h2>Sensor Monitoring</h2>
-          <p>Hardware sensor values will appear after ESP32 connection.</p>
+
+          <p class="section-kicker">
+            HARDWARE
+          </p>
+
+          <h2>
+            Sensor Monitoring
+          </h2>
+
+          <p>
+            Hardware sensor values will appear after ESP32 connection.
+          </p>
+
         </div>
 
         <span class="hardware-status">
+
           <i class="fa-solid fa-plug"></i>
           Hardware Not Connected
+
         </span>
+
       </div>
 
 
@@ -520,9 +679,19 @@
           </div>
 
           <div>
-            <span>Temperature</span>
-            <strong>-- °C</strong>
-            <small>Waiting for DHT11</small>
+
+            <span>
+              Temperature
+            </span>
+
+            <strong>
+              -- °C
+            </strong>
+
+            <small>
+              Waiting for DHT11
+            </small>
+
           </div>
 
         </div>
@@ -535,9 +704,19 @@
           </div>
 
           <div>
-            <span>Humidity</span>
-            <strong>-- %</strong>
-            <small>Waiting for DHT11</small>
+
+            <span>
+              Humidity
+            </span>
+
+            <strong>
+              -- %
+            </strong>
+
+            <small>
+              Waiting for DHT11
+            </small>
+
           </div>
 
         </div>
@@ -550,9 +729,19 @@
           </div>
 
           <div>
-            <span>Crop Status</span>
-            <strong>Pending</strong>
-            <small>AI image based</small>
+
+            <span>
+              Crop Status
+            </span>
+
+            <strong>
+              Pending
+            </strong>
+
+            <small>
+              AI image based
+            </small>
+
           </div>
 
         </div>
@@ -565,9 +754,19 @@
           </div>
 
           <div>
-            <span>ESP32</span>
-            <strong>Offline</strong>
-            <small>Hardware setup pending</small>
+
+            <span>
+              ESP32
+            </span>
+
+            <strong>
+              Offline
+            </strong>
+
+            <small>
+              Hardware setup pending
+            </small>
+
           </div>
 
         </div>
@@ -583,14 +782,28 @@
       <div class="section-heading">
 
         <div>
-          <p class="section-kicker">RECORDS</p>
-          <h2>Detection History</h2>
-          <p>All AI detections are recorded independently of email status.</p>
+
+          <p class="section-kicker">
+            RECORDS
+          </p>
+
+          <h2>
+            Detection History
+          </h2>
+
+          <p>
+            All AI detections are recorded independently of email status.
+          </p>
+
         </div>
 
-        <button id="clearHistory" class="secondary-btn">
+        <button
+          id="clearHistory"
+          class="secondary-btn">
+
           <i class="fa-solid fa-trash"></i>
           Clear History
+
         </button>
 
       </div>
@@ -598,12 +811,22 @@
 
       <div class="panel history-panel">
 
-        <div id="historyList" class="history-list">
+        <div
+          id="historyList"
+          class="history-list">
 
           <div class="empty-history">
+
             <i class="fa-solid fa-clock-rotate-left"></i>
-            <p>No detection history yet.</p>
-            <span>Run an AI detection to create a record.</span>
+
+            <p>
+              No detection history yet.
+            </p>
+
+            <span>
+              Run an AI detection to create a record.
+            </span>
+
           </div>
 
         </div>
@@ -617,18 +840,27 @@
     <footer>
 
       <div>
-        <strong>Team 16</strong>
-        <span>AI Smart Pest Detection & Alert System</span>
+
+        <strong>
+          Team 16
+        </strong>
+
+        <span>
+          AI Smart Pest Detection & Alert System
+        </span>
+
       </div>
 
-      <span>Smart Agriculture • AI • ESP32</span>
+      <span>
+        Smart Agriculture • AI • ESP32
+      </span>
 
     </footer>
 
   </main>
 
 
-  <script src="script.js?v=20260927"></script>
+  <script src="script.js?v=20260927-language1"></script>
 
 </body>
 </html>
