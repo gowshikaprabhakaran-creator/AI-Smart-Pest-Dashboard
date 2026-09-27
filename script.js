@@ -2457,3 +2457,488 @@ function escapeHTML(value) {
     .replace(/'/g, "&#039;");
 
 }
+
+/* =========================================================
+   ESP32 HARDWARE CONNECTION
+   ========================================================= */
+
+const ESP32_API_URL = "http://172.30.103.178/api/data";
+
+let esp32Connected = false;
+let esp32Data = null;
+
+
+/* =========================
+   ESP32 DATA FETCH
+========================= */
+
+async function fetchESP32Data() {
+
+  try {
+
+    const response = await fetch(
+      ESP32_API_URL,
+      {
+        method: "GET",
+        cache: "no-store"
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("ESP32 API error");
+    }
+
+    const data = await response.json();
+
+    esp32Connected = true;
+    esp32Data = data;
+
+    updateESP32Dashboard(data);
+
+  } catch (error) {
+
+    console.log(
+      "ESP32 connection:",
+      error.message
+    );
+
+    esp32Connected = false;
+
+    updateESP32Offline();
+
+  }
+
+}
+
+
+/* =========================
+   UPDATE ESP32 DASHBOARD
+========================= */
+
+function updateESP32Dashboard(data) {
+
+  const sensorCards =
+    document.querySelectorAll(
+      "#sensors .sensor-card"
+    );
+
+  if (!sensorCards.length) return;
+
+
+  /* -------------------------
+     ESP32 STATUS
+  ------------------------- */
+
+  const esp32Value =
+    sensorCards[3].querySelector("strong");
+
+  const esp32Small =
+    sensorCards[3].querySelector("small");
+
+  if (esp32Value) {
+
+    esp32Value.textContent =
+      "Online";
+
+  }
+
+  if (esp32Small) {
+
+    esp32Small.textContent =
+      data.ip
+        ? "IP: " + data.ip
+        : "Connected";
+
+  }
+
+
+  /* -------------------------
+     CROP / PEST STATUS
+  ------------------------- */
+
+  const cropValue =
+    sensorCards[2].querySelector("strong");
+
+  const cropSmall =
+    sensorCards[2].querySelector("small");
+
+  if (cropValue) {
+
+    cropValue.textContent =
+      data.pestDetected
+        ? "PEST DETECTED"
+        : "NO PEST";
+
+  }
+
+  if (cropSmall) {
+
+    cropSmall.textContent =
+      data.pestDetected
+        ? "ESP32 sensor alert"
+        : "Field clear";
+
+  }
+
+
+  /* -------------------------
+     HARDWARE STATUS
+  ------------------------- */
+
+  const hardwareStatus =
+    document.querySelector(
+      ".hardware-status"
+    );
+
+  if (hardwareStatus) {
+
+    hardwareStatus.innerHTML =
+      data.pestDetected
+
+        ? `
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          Pest Detected
+        `
+
+        : `
+          <i class="fa-solid fa-plug-circle-check"></i>
+          Hardware Connected
+        `;
+
+  }
+
+
+  /* -------------------------
+     ADD SENSOR DETAILS
+  ------------------------- */
+
+  let esp32Details =
+    document.getElementById(
+      "esp32SensorDetails"
+    );
+
+
+  if (!esp32Details) {
+
+    esp32Details =
+      document.createElement("div");
+
+    esp32Details.id =
+      "esp32SensorDetails";
+
+    esp32Details.className =
+      "panel";
+
+    const sensorsSection =
+      document.getElementById(
+        "sensors"
+      );
+
+    if (sensorsSection) {
+
+      sensorsSection.appendChild(
+        esp32Details
+      );
+
+    }
+
+  }
+
+
+  esp32Details.innerHTML = `
+
+    <div class="panel-header">
+
+      <div>
+
+        <h3>
+          <i class="fa-solid fa-microchip"></i>
+          ESP32 Live Sensor Data
+        </h3>
+
+        <p>
+          Real-time hardware status
+        </p>
+
+      </div>
+
+    </div>
+
+
+    <div style="
+      display:grid;
+      grid-template-columns:
+      repeat(auto-fit,minmax(150px,1fr));
+      gap:15px;
+      margin-top:15px;
+    ">
+
+
+      <div class="sensor-card">
+
+        <div class="sensor-card-icon">
+          <i class="fa-solid fa-eye"></i>
+        </div>
+
+        <div>
+
+          <span>IR Sensor</span>
+
+          <strong>
+            ${
+              data.irDetected
+                ? "DETECTED"
+                : "CLEAR"
+            }
+          </strong>
+
+          <small>
+            ${
+              data.irDetected
+                ? "Object detected"
+                : "No object"
+            }
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="sensor-card">
+
+        <div class="sensor-card-icon">
+          <i class="fa-solid fa-ruler"></i>
+        </div>
+
+        <div>
+
+          <span>Ultrasonic</span>
+
+          <strong>
+            ${
+              data.ultrasonicDetected
+                ? "DETECTED"
+                : "CLEAR"
+            }
+          </strong>
+
+          <small>
+            ${
+              data.distance_cm >= 0
+                ? Number(data.distance_cm).toFixed(1) +
+                  " cm"
+                : "No Echo"
+            }
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="sensor-card">
+
+        <div class="sensor-card-icon">
+          <i class="fa-solid fa-lightbulb"></i>
+        </div>
+
+        <div>
+
+          <span>LED Status</span>
+
+          <strong>
+            ${
+              data.redLED
+                ? "RED ON"
+                : "GREEN ON"
+            }
+          </strong>
+
+          <small>
+            Red: ${
+              data.redLED
+                ? "ON"
+                : "OFF"
+            }
+            |
+            Green: ${
+              data.greenLED
+                ? "ON"
+                : "OFF"
+            }
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="sensor-card">
+
+        <div class="sensor-card-icon">
+          <i class="fa-solid fa-volume-high"></i>
+        </div>
+
+        <div>
+
+          <span>Buzzer</span>
+
+          <strong>
+            ${
+              data.buzzer
+                ? "ON"
+                : "OFF"
+            }
+          </strong>
+
+          <small>
+            ${
+              data.buzzer
+                ? "Alert active"
+                : "Alert inactive"
+            }
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="sensor-card">
+
+        <div class="sensor-card-icon">
+          <i class="fa-solid fa-bug"></i>
+        </div>
+
+        <div>
+
+          <span>Pest Status</span>
+
+          <strong>
+            ${
+              data.pestDetected
+                ? "PEST DETECTED"
+                : "NO PEST"
+            }
+          </strong>
+
+          <small>
+            IR + Ultrasonic
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="sensor-card">
+
+        <div class="sensor-card-icon">
+          <i class="fa-solid fa-wifi"></i>
+        </div>
+
+        <div>
+
+          <span>ESP32 IP</span>
+
+          <strong style="font-size:14px;">
+            ${data.ip || "--"}
+          </strong>
+
+          <small>
+            Connected
+          </small>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+/* =========================
+   ESP32 OFFLINE
+========================= */
+
+function updateESP32Offline() {
+
+  const sensorCards =
+    document.querySelectorAll(
+      "#sensors .sensor-card"
+    );
+
+  if (sensorCards.length >= 4) {
+
+    const esp32Value =
+      sensorCards[3].querySelector("strong");
+
+    const esp32Small =
+      sensorCards[3].querySelector("small");
+
+    if (esp32Value) {
+
+      esp32Value.textContent =
+        "Offline";
+
+    }
+
+    if (esp32Small) {
+
+      esp32Small.textContent =
+        "Waiting for ESP32";
+
+    }
+
+  }
+
+
+  const hardwareStatus =
+    document.querySelector(
+      ".hardware-status"
+    );
+
+  if (hardwareStatus) {
+
+    hardwareStatus.innerHTML = `
+      <i class="fa-solid fa-plug"></i>
+      Hardware Not Connected
+    `;
+
+  }
+
+}
+
+
+/* =========================
+   START ESP32 MONITORING
+========================= */
+
+function startESP32Monitoring() {
+
+  fetchESP32Data();
+
+  setInterval(
+    fetchESP32Data,
+    2000
+  );
+
+}
+
+
+/* =========================
+   START AFTER PAGE LOAD
+========================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    startESP32Monitoring();
+
+  }
+);
