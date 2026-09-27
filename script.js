@@ -1,24 +1,23 @@
 /* =========================================================
-   TEAM 16
-   AI SMART PEST DETECTION & ALERT SYSTEM
-========================================================= */
+   TEAM 16 - AI SMART PEST DETECTION
+   ========================================================= */
 
 
-/* =========================================================
+/* =========================
    CONFIGURATION
-========================================================= */
+========================= */
 
-const EMAIL_SERVICE_ID = "service_x2d7sj";
-const EMAIL_TEMPLATE_ID = "template_6efhw0d";
-const EMAIL_PUBLIC_KEY = "wOORs4b9toARevid-";
+const EMAIL_SERVICE_ID = "service_1js9nlz";
+const EMAIL_TEMPLATE_ID = "template_9gcw7py";
+const EMAIL_PUBLIC_KEY = "qw4mZGHePXrD9RUOk";
 
 const MODEL_URL = "./model/model.json";
 const METADATA_URL = "./model/metadata.json";
 
 
-/* =========================================================
+/* =========================
    GLOBAL VARIABLES
-========================================================= */
+========================= */
 
 let model = null;
 let maxPredictions = 0;
@@ -26,21 +25,32 @@ let maxPredictions = 0;
 let cameraStream = null;
 let currentFacingMode = "environment";
 
-let totalDetections = 0;
-let activeThreats = 0;
-let emailAlerts = 0;
+let totalDetections =
+  Number(localStorage.getItem("totalDetections")) || 0;
 
-let savedEmail = localStorage.getItem("agriAlertEmail") || "";
+let emailAlerts =
+  Number(localStorage.getItem("emailAlerts")) || 0;
 
-let detectionHistory = [];
+let activeThreats =
+  Number(localStorage.getItem("activeThreats")) || 0;
 
-let pestCounts = {
-  Aphid: 0,
-  Caterpillar: 0,
-  Whitefly: 0,
-  Thrips: 0,
-  "Healthy Leaf": 0
-};
+let savedEmail =
+  localStorage.getItem("agriAlertEmail") || "";
+
+let detectionHistory =
+  JSON.parse(localStorage.getItem("detectionHistory") || "[]");
+
+let pestCounts =
+  JSON.parse(
+    localStorage.getItem("pestCounts") ||
+    JSON.stringify({
+      Aphid: 0,
+      Caterpillar: 0,
+      Whitefly: 0,
+      Thrips: 0,
+      "Healthy Leaf": 0
+    })
+  );
 
 let pestChart = null;
 let trendChart = null;
@@ -48,19 +58,25 @@ let trendChart = null;
 let emailJSReady = false;
 
 
-/* =========================================================
+/* =========================
    DOM READY
-========================================================= */
+========================= */
 
 document.addEventListener("DOMContentLoaded", () => {
 
   setupNavigation();
   setupLanguage();
   setupEmail();
+  setupCamera();
+  setupUpload();
+  setupHistory();
 
   loadSavedEmail();
 
   updateDashboardStats();
+  renderHistory();
+  renderAlerts();
+
   updatePestChart();
   updateTrendChart();
 
@@ -70,25 +86,25 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-/* =========================================================
+/* =========================
    NAVIGATION
-   All sections stay on one page.
-   Clicking menu scrolls to section.
-========================================================= */
+========================= */
 
 function setupNavigation() {
 
-  const navLinks = document.querySelectorAll(".nav-link");
+  const links = document.querySelectorAll(".nav-link");
 
-  navLinks.forEach(link => {
+  links.forEach(link => {
 
     link.addEventListener("click", event => {
 
       event.preventDefault();
 
-      const targetId = link.getAttribute("href");
+      const targetId =
+        link.getAttribute("href");
 
-      const target = document.querySelector(targetId);
+      const target =
+        document.querySelector(targetId);
 
       if (target) {
 
@@ -104,64 +120,65 @@ function setupNavigation() {
   });
 
 
-  const sections = document.querySelectorAll(".section");
+  const sections =
+    document.querySelectorAll("section[id]");
 
-  const observer = new IntersectionObserver(
-    entries => {
+  const observer =
+    new IntersectionObserver(
+      entries => {
 
-      entries.forEach(entry => {
+        entries.forEach(entry => {
 
-        if (entry.isIntersecting) {
+          if (!entry.isIntersecting) return;
 
-          const id = entry.target.id;
-
-          navLinks.forEach(link => {
+          links.forEach(link => {
 
             link.classList.toggle(
               "active",
-              link.getAttribute("href") === `#${id}`
+              link.getAttribute("href") ===
+              "#" + entry.target.id
             );
 
           });
 
-        }
+        });
 
-      });
+      },
+      {
+        threshold: 0.2
+      }
+    );
 
-    },
-    {
-      rootMargin: "-25% 0px -60% 0px"
-    }
+  sections.forEach(section =>
+    observer.observe(section)
   );
-
-
-  sections.forEach(section => {
-    observer.observe(section);
-  });
 
 }
 
 
-/* =========================================================
+/* =========================
    LANGUAGE
-========================================================= */
+========================= */
 
 function setupLanguage() {
 
-  const selector = document.getElementById("languageSelector");
+  const selector =
+    document.getElementById("languageSelector");
 
-  if (!selector) {
-    return;
-  }
+  if (!selector) return;
 
   selector.addEventListener("change", () => {
 
-    const language = selector.value;
+    if (selector.value === "ta") {
 
-    if (language === "ta") {
-      applyTamil();
+      document.getElementById("heroDescription").textContent =
+        "AI பட பகுப்பாய்வு மூலம் பயிர் பூச்சிகளை கண்டறிந்து, விரைவான நடவடிக்கைக்காக Email Alert பெறலாம்.";
+
     } else {
-      applyEnglish();
+
+      document.getElementById("heroDescription").textContent =
+        "Detect crop pests instantly using AI image classification and receive email alerts for faster action.";
+
     }
 
   });
@@ -169,57 +186,24 @@ function setupLanguage() {
 }
 
 
-function applyEnglish() {
-
-  document.documentElement.lang = "en";
-
-  const dashboardText =
-    document.querySelector("#dashboard .hero p");
-
-  if (dashboardText) {
-    dashboardText.textContent =
-      "Detect crop pests using AI image analysis and receive instant alerts.";
-  }
-
-}
-
-
-function applyTamil() {
-
-  document.documentElement.lang = "ta";
-
-  const dashboardText =
-    document.querySelector("#dashboard .hero p");
-
-  if (dashboardText) {
-    dashboardText.textContent =
-      "AI image analysis மூலம் பயிர்களில் உள்ள பூச்சிகளை கண்டறிந்து உடனடி alert பெறலாம்.";
-  }
-
-}
-
-
-/* =========================================================
-   EMAILJS INITIALIZATION
-========================================================= */
+/* =========================
+   EMAILJS
+========================= */
 
 function initializeEmailJS() {
-
-  const statusElement =
-    document.getElementById("emailStatus");
 
   if (typeof emailjs === "undefined") {
 
     emailJSReady = false;
 
     showEmailStatus(
-      "EmailJS library is not loaded. Check internet connection and reload the page.",
+      "EmailJS library is not loaded. Check your internet connection and reload.",
       "error"
     );
 
     return;
-  }
 
+  }
 
   try {
 
@@ -232,7 +216,7 @@ function initializeEmailJS() {
     if (savedEmail) {
 
       showEmailStatus(
-        `Email saved: ${savedEmail}`,
+        "Email saved: " + savedEmail,
         "success"
       );
 
@@ -243,7 +227,8 @@ function initializeEmailJS() {
     emailJSReady = false;
 
     showEmailStatus(
-      "EmailJS initialization failed: " + getErrorMessage(error),
+      "EmailJS initialization failed: " +
+      getErrorMessage(error),
       "error"
     );
 
@@ -252,9 +237,9 @@ function initializeEmailJS() {
 }
 
 
-/* =========================================================
+/* =========================
    EMAIL SETUP
-========================================================= */
+========================= */
 
 function setupEmail() {
 
@@ -264,58 +249,71 @@ function setupEmail() {
   const testButton =
     document.getElementById("testEmail");
 
-  const emailInput =
+  const input =
     document.getElementById("alertEmail");
 
 
-  if (saveButton) {
+  saveButton.addEventListener("click", () => {
 
-    saveButton.addEventListener("click", saveEmail);
+    const email =
+      input.value.trim();
 
-  }
+    if (!email) {
+
+      showEmailStatus(
+        "Please enter an email address.",
+        "error"
+      );
+
+      return;
+
+    }
+
+    if (!isValidEmail(email)) {
+
+      showEmailStatus(
+        "Please enter a valid email address.",
+        "error"
+      );
+
+      return;
+
+    }
+
+    savedEmail = email;
+
+    localStorage.setItem(
+      "agriAlertEmail",
+      savedEmail
+    );
+
+    showEmailStatus(
+      "Email saved successfully: " + savedEmail,
+      "success"
+    );
+
+  });
 
 
-  if (testButton) {
-
-    testButton.addEventListener("click", sendTestEmail);
-
-  }
-
-
-  if (emailInput) {
-
-    emailInput.addEventListener("keydown", event => {
-
-      if (event.key === "Enter") {
-        saveEmail();
-      }
-
-    });
-
-  }
+  testButton.addEventListener(
+    "click",
+    sendTestEmail
+  );
 
 }
 
-
-/* =========================================================
-   LOAD SAVED EMAIL
-========================================================= */
 
 function loadSavedEmail() {
 
   const input =
     document.getElementById("alertEmail");
 
-  if (!input) {
-    return;
-  }
-
   if (savedEmail) {
 
     input.value = savedEmail;
 
     showEmailStatus(
-      `Email saved: ${savedEmail}`,
+      "Saved email: " + savedEmail,
       "success"
     );
 
@@ -324,121 +322,39 @@ function loadSavedEmail() {
 }
 
 
-/* =========================================================
-   SAVE EMAIL
-========================================================= */
-
-function saveEmail() {
-
-  const input =
-    document.getElementById("alertEmail");
-
-  if (!input) {
-    return;
-  }
-
-  const email =
-    input.value.trim();
-
-
-  if (!email) {
-
-    showEmailStatus(
-      "Please enter an email address.",
-      "error"
-    );
-
-    return;
-  }
-
-
-  if (!isValidEmail(email)) {
-
-    showEmailStatus(
-      "Please enter a valid email address.",
-      "error"
-    );
-
-    return;
-  }
-
-
-  savedEmail = email;
-
-  localStorage.setItem(
-    "agriAlertEmail",
-    savedEmail
-  );
-
-
-  showEmailStatus(
-    `Email saved successfully: ${savedEmail}`,
-    "success"
-  );
-
-}
-
-
-/* =========================================================
-   EMAIL VALIDATION
-========================================================= */
-
-function isValidEmail(email) {
-
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-}
-
-
-/* =========================================================
-   SHOW EMAIL STATUS
-========================================================= */
-
-function showEmailStatus(message, type = "") {
-
-  const status =
-    document.getElementById("emailStatus");
-
-  if (!status) {
-    return;
-  }
-
-  status.textContent = message;
-
-  status.className = "email-status";
-
-  if (type) {
-    status.classList.add(type);
-  }
-
-}
-
-
-/* =========================================================
-   TEST EMAIL
-========================================================= */
-
-async function sendTestEmail() {
+function sendTestEmail() {
 
   if (!savedEmail) {
 
-    showEmailStatus(
-      "Please save an email address first.",
-      "error"
-    );
+    const input =
+      document.getElementById("alertEmail");
 
-    return;
+    const email =
+      input.value.trim();
+
+    if (!email) {
+
+      showEmailStatus(
+        "Enter and save an email address first.",
+        "error"
+      );
+
+      return;
+
+    }
+
   }
 
 
-  if (!emailJSReady || typeof emailjs === "undefined") {
+  if (!emailJSReady) {
 
     showEmailStatus(
-      "EmailJS is not ready. Check internet connection and reload the page.",
+      "EmailJS is not ready. Please reload the page.",
       "error"
     );
 
     return;
+
   }
 
 
@@ -448,218 +364,315 @@ async function sendTestEmail() {
   );
 
 
-  try {
-
-    const response = await emailjs.send(
-      EMAIL_SERVICE_ID,
-      EMAIL_TEMPLATE_ID,
-      {
-        to_email: savedEmail,
-        pest_name: "Test Detection",
-        confidence: "100%",
-        status: "Test Email"
-      }
-    );
-
+  emailjs.send(
+    EMAIL_SERVICE_ID,
+    EMAIL_TEMPLATE_ID,
+    {
+      to_email: savedEmail,
+      pest_name: "Test Detection",
+      confidence: "100%",
+      status: "Test Email"
+    }
+  )
+  .then(response => {
 
     if (response && response.status === 200) {
 
       showEmailStatus(
-        `Test email sent successfully to ${savedEmail}.`,
+        "Test email sent successfully to " +
+        savedEmail,
         "success"
       );
 
     } else {
 
       showEmailStatus(
-        `EmailJS returned an unexpected response: ${response?.status || "unknown"} ${response?.text || ""}`,
+        "EmailJS returned an unexpected response.",
         "error"
       );
 
     }
 
-  } catch (error) {
+  })
+  .catch(error => {
 
     showEmailStatus(
-      "Test email failed: " + getErrorMessage(error),
+      "Test email failed. Service ID: " +
+      EMAIL_SERVICE_ID +
+      " | Template ID: " +
+      EMAIL_TEMPLATE_ID +
+      " | Error: " +
+      getErrorMessage(error),
       "error"
     );
-
-  }
-
-}
-
-
-/* =========================================================
-   LOAD AI MODEL
-========================================================= */
-
-async function loadAIModel() {
-
-  const status =
-    document.getElementById("modelStatus");
-
-
-  try {
-
-    if (status) {
-      status.textContent = "Loading...";
-    }
-
-
-    model = await tmImage.load(
-      MODEL_URL,
-      METADATA_URL
-    );
-
-
-    maxPredictions =
-      model.getTotalClasses();
-
-
-    if (status) {
-      status.textContent = "Ready";
-    }
-
-
-    setupImageUpload();
-    setupCamera();
-
-  } catch (error) {
-
-    console.error(error);
-
-    if (status) {
-      status.textContent = "Error";
-    }
-
-    showResultError(
-      "AI model could not be loaded. Please check the model folder."
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   IMAGE UPLOAD
-========================================================= */
-
-function setupImageUpload() {
-
-  const input =
-    document.getElementById("imageUpload");
-
-  if (!input) {
-    return;
-  }
-
-
-  input.addEventListener("change", async event => {
-
-    const file =
-      event.target.files[0];
-
-    if (!file) {
-      return;
-    }
-
-
-    const image =
-      new Image();
-
-
-    image.onload = async () => {
-
-      const preview =
-        document.getElementById("previewImage");
-
-      const placeholder =
-        document.getElementById("previewPlaceholder");
-
-
-      if (preview) {
-
-        preview.src =
-          URL.createObjectURL(file);
-
-        preview.style.display =
-          "block";
-
-      }
-
-
-      if (placeholder) {
-        placeholder.style.display =
-          "none";
-      }
-
-
-      await predictImage(image);
-
-    };
-
-
-    image.src =
-      URL.createObjectURL(file);
 
   });
 
 }
 
 
-/* =========================================================
-   CAMERA
-========================================================= */
+function sendPestEmail(
+  pestName,
+  confidence,
+  historyRecord
+) {
 
-function setupCamera() {
+  if (!savedEmail) {
 
-  const startButton =
-    document.getElementById("startCamera");
+    historyRecord.emailSent = false;
+    historyRecord.emailMessage =
+      "No email address saved.";
 
-  const captureButton =
-    document.getElementById("captureImage");
+    saveHistory();
 
-  const stopButton =
-    document.getElementById("stopCamera");
+    renderHistory();
+    renderAlerts();
 
-
-  if (startButton) {
-
-    startButton.addEventListener(
-      "click",
-      startCamera
-    );
+    return;
 
   }
 
 
-  if (captureButton) {
+  if (!emailJSReady) {
 
-    captureButton.addEventListener(
-      "click",
-      captureAndPredict
+    historyRecord.emailSent = false;
+    historyRecord.emailMessage =
+      "EmailJS is not ready.";
+
+    saveHistory();
+
+    renderHistory();
+    renderAlerts();
+
+    showEmailStatus(
+      "Pest detected, but EmailJS is not ready.",
+      "error"
     );
+
+    return;
 
   }
 
 
-  if (stopButton) {
+  showEmailStatus(
+    "Pest detected. Sending email alert...",
+    ""
+  );
 
-    stopButton.addEventListener(
-      "click",
-      stopCamera
+
+  emailjs.send(
+    EMAIL_SERVICE_ID,
+    EMAIL_TEMPLATE_ID,
+    {
+      to_email: savedEmail,
+      pest_name: pestName,
+      confidence: confidence + "%",
+      status: "Pest Detected"
+    }
+  )
+  .then(response => {
+
+    if (response && response.status === 200) {
+
+      historyRecord.emailSent = true;
+      historyRecord.emailMessage =
+        "Email sent successfully";
+
+      emailAlerts++;
+
+      localStorage.setItem(
+        "emailAlerts",
+        emailAlerts
+      );
+
+      saveHistory();
+
+      updateDashboardStats();
+      renderHistory();
+      renderAlerts();
+
+      showEmailStatus(
+        "Pest alert sent successfully to " +
+        savedEmail,
+        "success"
+      );
+
+    } else {
+
+      historyRecord.emailSent = false;
+      historyRecord.emailMessage =
+        "EmailJS returned an unexpected response.";
+
+      saveHistory();
+
+      renderHistory();
+      renderAlerts();
+
+      showEmailStatus(
+        "Email alert failed: unexpected EmailJS response.",
+        "error"
+      );
+
+    }
+
+  })
+  .catch(error => {
+
+    historyRecord.emailSent = false;
+    historyRecord.emailMessage =
+      getErrorMessage(error);
+
+    saveHistory();
+
+    renderHistory();
+    renderAlerts();
+
+    showEmailStatus(
+      "Pest detected, but email failed. " +
+      getErrorMessage(error),
+      "error"
     );
+
+  });
+
+}
+
+
+/* =========================
+   EMAIL HELPERS
+========================= */
+
+function showEmailStatus(message, type) {
+
+  const status =
+    document.getElementById("emailStatus");
+
+  if (!status) return;
+
+  status.textContent = message;
+
+  status.className =
+    "email-status" +
+    (type ? " " + type : "");
+
+}
+
+
+function isValidEmail(email) {
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+}
+
+
+function getErrorMessage(error) {
+
+  if (!error) {
+    return "Unknown EmailJS error.";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error.text) {
+    return error.text;
+  }
+
+  if (error.message) {
+    return error.message;
+  }
+
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return "Unknown EmailJS error.";
+  }
+
+}
+
+
+/* =========================
+   AI MODEL
+========================= */
+
+async function loadAIModel() {
+
+  const status =
+    document.getElementById("modelStatus");
+
+  try {
+
+    if (typeof tmImage === "undefined") {
+
+      throw new Error(
+        "Teachable Machine library is not loaded."
+      );
+
+    }
+
+    model =
+      await tmImage.load(
+        MODEL_URL,
+        METADATA_URL
+      );
+
+    maxPredictions =
+      model.getTotalClasses();
+
+    status.textContent = "Ready";
+
+    status.style.color = "#5ddd9b";
+
+  } catch (error) {
+
+    console.error(
+      "Model loading error:",
+      error
+    );
+
+    status.textContent = "Error";
+
+    status.style.color = "#ff7f87";
 
   }
 
 }
 
 
-/* =========================================================
-   START CAMERA
-========================================================= */
+/* =========================
+   CAMERA
+========================= */
+
+function setupCamera() {
+
+  const start =
+    document.getElementById("startCamera");
+
+  const capture =
+    document.getElementById("captureImage");
+
+  const stop =
+    document.getElementById("stopCamera");
+
+
+  start.addEventListener(
+    "click",
+    startCamera
+  );
+
+  capture.addEventListener(
+    "click",
+    captureCameraImage
+  );
+
+  stop.addEventListener(
+    "click",
+    stopCamera
+  );
+
+}
+
 
 async function startCamera() {
 
@@ -669,28 +682,21 @@ async function startCamera() {
   const placeholder =
     document.getElementById("cameraPlaceholder");
 
-  const startButton =
+  const start =
     document.getElementById("startCamera");
 
-  const captureButton =
+  const capture =
     document.getElementById("captureImage");
 
-  const stopButton =
+  const stop =
     document.getElementById("stopCamera");
 
 
   try {
 
-    if (!navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia) {
-
-      showResultError(
-        "Camera is not supported in this browser."
-      );
-
-      return;
+    if (cameraStream) {
+      stopCamera();
     }
-
 
     cameraStream =
       await navigator.mediaDevices.getUserMedia({
@@ -700,118 +706,27 @@ async function startCamera() {
         audio: false
       });
 
+    video.srcObject = cameraStream;
 
-    video.srcObject =
-      cameraStream;
+    video.style.display = "block";
+    placeholder.style.display = "none";
 
-    video.style.display =
-      "block";
-
-
-    if (placeholder) {
-      placeholder.style.display =
-        "none";
-    }
-
-
-    if (startButton) {
-      startButton.disabled = true;
-    }
-
-    if (captureButton) {
-      captureButton.disabled = false;
-    }
-
-    if (stopButton) {
-      stopButton.disabled = false;
-    }
+    start.disabled = true;
+    capture.disabled = false;
+    stop.disabled = false;
 
   } catch (error) {
 
-    showResultError(
-      "Could not access camera: " +
-      getErrorMessage(error)
+    showEmailStatus(
+      "Camera could not start: " +
+      error.message,
+      "error"
     );
 
   }
 
 }
 
-
-/* =========================================================
-   CAPTURE IMAGE FROM CAMERA
-========================================================= */
-
-async function captureAndPredict() {
-
-  const video =
-    document.getElementById("camera");
-
-
-  if (!cameraStream) {
-
-    showResultError(
-      "Please start the camera first."
-    );
-
-    return;
-  }
-
-
-  if (!model) {
-
-    showResultError(
-      "AI model is still loading."
-    );
-
-    return;
-  }
-
-
-  const canvas =
-    document.createElement("canvas");
-
-
-  canvas.width =
-    video.videoWidth || 640;
-
-  canvas.height =
-    video.videoHeight || 480;
-
-
-  const context =
-    canvas.getContext("2d");
-
-
-  context.drawImage(
-    video,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-
-  const image =
-    new Image();
-
-
-  image.onload = async () => {
-
-    await predictImage(image);
-
-  };
-
-
-  image.src =
-    canvas.toDataURL("image/jpeg");
-
-}
-
-
-/* =========================================================
-   STOP CAMERA
-========================================================= */
 
 function stopCamera() {
 
@@ -821,13 +736,13 @@ function stopCamera() {
   const placeholder =
     document.getElementById("cameraPlaceholder");
 
-  const startButton =
+  const start =
     document.getElementById("startCamera");
 
-  const captureButton =
+  const capture =
     document.getElementById("captureImage");
 
-  const stopButton =
+  const stop =
     document.getElementById("stopCamera");
 
 
@@ -841,113 +756,225 @@ function stopCamera() {
 
   }
 
+  video.srcObject = null;
 
-  if (video) {
+  video.style.display = "none";
+  placeholder.style.display = "grid";
 
-    video.srcObject = null;
-    video.style.display = "none";
-
-  }
-
-
-  if (placeholder) {
-    placeholder.style.display = "flex";
-  }
-
-
-  if (startButton) {
-    startButton.disabled = false;
-  }
-
-  if (captureButton) {
-    captureButton.disabled = true;
-  }
-
-  if (stopButton) {
-    stopButton.disabled = true;
-  }
+  start.disabled = false;
+  capture.disabled = true;
+  stop.disabled = true;
 
 }
 
 
-/* =========================================================
-   PREDICT IMAGE
-========================================================= */
+async function captureCameraImage() {
 
-async function predictImage(image) {
+  const video =
+    document.getElementById("camera");
 
-  if (!model) {
-
-    showResultError(
-      "AI model is not ready yet."
-    );
+  if (!video.videoWidth) {
 
     return;
+
   }
 
 
-  showResultLoading();
+  const canvas =
+    document.createElement("canvas");
+
+  canvas.width =
+    video.videoWidth;
+
+  canvas.height =
+    video.videoHeight;
+
+  const context =
+    canvas.getContext("2d");
+
+  context.drawImage(
+    video,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+
+  await predictImage(canvas);
+
+}
+
+
+/* =========================
+   UPLOAD
+========================= */
+
+function setupUpload() {
+
+  const input =
+    document.getElementById("imageUpload");
+
+  input.addEventListener(
+    "change",
+    handleImageUpload
+  );
+
+}
+
+
+function handleImageUpload(event) {
+
+  const file =
+    event.target.files[0];
+
+  if (!file) return;
+
+
+  if (!file.type.startsWith("image/")) {
+
+    return;
+
+  }
+
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload = async event => {
+
+    const img =
+      document.getElementById("uploadedImage");
+
+    img.src =
+      event.target.result;
+
+    document.querySelector(
+      ".uploaded-preview"
+    ).style.display = "block";
+
+
+    img.onload = async () => {
+
+      await predictImage(img);
+
+    };
+
+  };
+
+
+  reader.readAsDataURL(file);
+
+}
+
+
+/* =========================
+   AI PREDICTION
+========================= */
+
+async function predictImage(imageElement) {
+
+  if (!model) {
+
+    alert(
+      "AI model is still loading. Please wait a moment and try again."
+    );
+
+    return;
+
+  }
 
 
   try {
 
     const predictions =
-      await model.predict(
-        image,
-        false
-      );
+      await model.predict(imageElement);
 
 
-    predictions.sort(
+    const predictionData =
+      predictions.map(prediction => ({
+        name: normalizeClassName(
+          prediction.className
+        ),
+        probability:
+          prediction.probability
+      }));
+
+
+    predictionData.sort(
       (a, b) =>
         b.probability - a.probability
     );
 
 
-    const result =
-      predictions[0];
+    const best =
+      predictionData[0];
 
 
     const pestName =
-      normalizeClassName(result.className);
-
+      best.name;
 
     const confidence =
-      Math.round(
-        result.probability * 100
+      Number(
+        (best.probability * 100).toFixed(1)
       );
 
 
     totalDetections++;
 
+    localStorage.setItem(
+      "totalDetections",
+      totalDetections
+    );
 
-    if (pestCounts[pestName] !== undefined) {
+
+    if (
+      pestName !== "Healthy Leaf"
+    ) {
+
+      activeThreats++;
+
+      localStorage.setItem(
+        "activeThreats",
+        activeThreats
+      );
+
+    }
+
+
+    if (
+      pestCounts[pestName] !== undefined
+    ) {
 
       pestCounts[pestName]++;
 
     }
 
 
-    const isHealthy =
-      pestName === "Healthy Leaf";
-
-
-    if (!isHealthy) {
-
-      activeThreats++;
-
-    }
+    localStorage.setItem(
+      "pestCounts",
+      JSON.stringify(pestCounts)
+    );
 
 
     const historyRecord = {
+
+      id: Date.now(),
 
       name: pestName,
 
       confidence: confidence,
 
-      timestamp: new Date(),
+      timestamp:
+        new Date().toISOString(),
 
-      emailSent: false
+      emailSent: false,
+
+      emailMessage:
+        pestName === "Healthy Leaf"
+          ? "No email required for healthy leaf."
+          : "Email pending"
 
     };
 
@@ -957,35 +984,46 @@ async function predictImage(image) {
     );
 
 
-    if (detectionHistory.length > 20) {
+    if (detectionHistory.length > 50) {
 
       detectionHistory =
-        detectionHistory.slice(0, 20);
+        detectionHistory.slice(0, 50);
 
     }
 
 
+    saveHistory();
+
+
     updateDashboardStats();
+
     updatePestChart();
+
     updateTrendChart();
+
+    renderHistory();
+
+    renderAlerts();
 
     showPredictionResult(
       pestName,
       confidence,
-      predictions
+      predictionData
     );
 
 
-    addDetectionAlert(
-      pestName,
-      confidence,
-      historyRecord
-    );
+    /*
+      IMPORTANT:
+      History is already saved above.
+      Email sending happens AFTER history creation.
+      So email failure cannot hide the history.
+    */
 
+    if (
+      pestName !== "Healthy Leaf"
+    ) {
 
-    if (!isHealthy) {
-
-      await sendPestEmail(
+      sendPestEmail(
         pestName,
         confidence,
         historyRecord
@@ -993,13 +1031,17 @@ async function predictImage(image) {
 
     }
 
+
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "Prediction error:",
+      error
+    );
 
-    showResultError(
+    alert(
       "Prediction failed: " +
-      getErrorMessage(error)
+      error.message
     );
 
   }
@@ -1007,35 +1049,35 @@ async function predictImage(image) {
 }
 
 
-/* =========================================================
-   NORMALIZE MODEL CLASS NAMES
-========================================================= */
+/* =========================
+   CLASS NAME NORMALIZATION
+========================= */
 
 function normalizeClassName(name) {
 
-  const value =
+  const clean =
     String(name)
       .trim()
       .toLowerCase();
 
 
-  if (value === "healthy leaf") {
+  if (clean === "healthy leaf") {
     return "Healthy Leaf";
   }
 
-  if (value === "aphid") {
+  if (clean === "aphid") {
     return "Aphid";
   }
 
-  if (value === "caterpillar") {
+  if (clean === "caterpillar") {
     return "Caterpillar";
   }
 
-  if (value === "whitefly") {
+  if (clean === "whitefly") {
     return "Whitefly";
   }
 
-  if (value === "thrips") {
+  if (clean === "thrips") {
     return "Thrips";
   }
 
@@ -1045,405 +1087,503 @@ function normalizeClassName(name) {
 }
 
 
-/* =========================================================
-   SHOW RESULT
-========================================================= */
+/* =========================
+   SHOW PREDICTION
+========================= */
 
 function showPredictionResult(
   pestName,
   confidence,
-  predictions
+  predictionData
 ) {
 
-  const resultContent =
-    document.getElementById("resultContent");
+  const card =
+    document.getElementById(
+      "predictionResult"
+    );
+
+  const name =
+    document.getElementById(
+      "predictionName"
+    );
+
+  const confidenceText =
+    document.getElementById(
+      "predictionConfidence"
+    );
 
 
-  if (!resultContent) {
-    return;
-  }
+  card.classList.remove("hidden");
+
+  name.textContent =
+    pestName;
+
+  confidenceText.textContent =
+    confidence + "%";
 
 
-  const isHealthy =
-    pestName === "Healthy Leaf";
+  renderPredictionScores(
+    predictionData
+  );
+
+}
 
 
-  let predictionRows = "";
+function renderPredictionScores(
+  predictionData
+) {
+
+  const container =
+    document.getElementById(
+      "predictionScores"
+    );
 
 
-  predictions.forEach(prediction => {
+  container.innerHTML = "";
 
-    const name =
-      normalizeClassName(
-        prediction.className
-      );
+
+  predictionData.forEach(item => {
 
     const percentage =
-      Math.round(
-        prediction.probability * 100
+      Number(
+        (item.probability * 100).toFixed(1)
       );
 
 
-    predictionRows += `
-      <div class="prediction-row">
-        <span>${escapeHTML(name)}</span>
-        <strong>${percentage}%</strong>
+    const row =
+      document.createElement("div");
+
+    row.className =
+      "score-row";
+
+
+    row.innerHTML = `
+      <div class="score-name">
+        ${escapeHTML(item.name)}
+      </div>
+
+      <div class="score-bar">
+        <div
+          class="score-fill"
+          style="width:${percentage}%">
+        </div>
+      </div>
+
+      <div class="score-value">
+        ${percentage}%
       </div>
     `;
 
+
+    container.appendChild(row);
+
   });
 
-
-  resultContent.innerHTML = `
-
-    <div class="prediction-result">
-
-      <div>
-
-        <div class="prediction-name ${isHealthy ? "healthy" : "pest"}">
-          ${escapeHTML(pestName)}
-        </div>
-
-        <div class="prediction-confidence">
-          AI Confidence:
-          <span class="confidence-value">
-            ${confidence}%
-          </span>
-        </div>
-
-        <div class="result-status">
-          ${
-            isHealthy
-              ? "Healthy leaf detected."
-              : "Pest detected. Email alert process started."
-          }
-        </div>
-
-      </div>
-
-      <div class="prediction-score">
-        <strong>${confidence}%</strong>
-      </div>
-
-    </div>
-
-    <div class="prediction-list">
-      ${predictionRows}
-    </div>
-
-  `;
-
 }
 
 
-/* =========================================================
-   RESULT LOADING
-========================================================= */
+/* =========================
+   HISTORY
+========================= */
 
-function showResultLoading() {
+function saveHistory() {
 
-  const resultContent =
-    document.getElementById("resultContent");
-
-  if (!resultContent) {
-    return;
-  }
-
-
-  resultContent.innerHTML = `
-
-    <div class="result-empty">
-
-      <i class="fa-solid fa-spinner fa-spin"></i>
-
-      <p>AI is analysing...</p>
-
-      <span>Please wait.</span>
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
-   RESULT ERROR
-========================================================= */
-
-function showResultError(message) {
-
-  const resultContent =
-    document.getElementById("resultContent");
-
-  if (!resultContent) {
-    return;
-  }
-
-
-  resultContent.innerHTML = `
-
-    <div class="result-empty">
-
-      <i class="fa-solid fa-circle-exclamation"></i>
-
-      <p>Error</p>
-
-      <span>${escapeHTML(message)}</span>
-
-    </div>
-
-  `;
-
-}
-
-
-/* =========================================================
-   SEND PEST EMAIL
-========================================================= */
-
-async function sendPestEmail(
-  pestName,
-  confidence,
-  historyRecord
-) {
-
-  if (!savedEmail) {
-
-    showEmailStatus(
-      "Pest detected, but no email address is saved.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  if (!emailJSReady || typeof emailjs === "undefined") {
-
-    showEmailStatus(
-      "Pest detected, but EmailJS is not ready.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  showEmailStatus(
-    `Pest detected. Sending alert to ${savedEmail}...`,
-    ""
+  localStorage.setItem(
+    "detectionHistory",
+    JSON.stringify(detectionHistory)
   );
 
-
-  try {
-
-    const response =
-      await emailjs.send(
-        EMAIL_SERVICE_ID,
-        EMAIL_TEMPLATE_ID,
-        {
-          to_email: savedEmail,
-          pest_name: pestName,
-          confidence: confidence + "%",
-          status: "Pest Detected"
-        }
-      );
+}
 
 
-    /*
-      IMPORTANT:
-      Email Alerts count increases ONLY
-      when EmailJS confirms success.
-    */
+function setupHistory() {
 
-    if (response && response.status === 200) {
-
-      historyRecord.emailSent = true;
-
-      emailAlerts++;
-
-      updateDashboardStats();
-      renderAlerts();
-
-      showEmailStatus(
-        `Pest alert sent successfully to ${savedEmail}.`,
-        "success"
-      );
-
-    } else {
-
-      showEmailStatus(
-        `EmailJS failed: ${response?.status || "unknown"} ${response?.text || ""}`,
-        "error"
-      );
-
-    }
-
-  } catch (error) {
-
-    console.error("EmailJS error:", error);
-
-    showEmailStatus(
-      "Pest alert email failed: " +
-      getErrorMessage(error),
-      "error"
+  const clearButton =
+    document.getElementById(
+      "clearHistory"
     );
 
-  }
+
+  clearButton.addEventListener(
+    "click",
+    () => {
+
+      if (
+        detectionHistory.length === 0
+      ) {
+
+        return;
+
+      }
+
+
+      const confirmed =
+        confirm(
+          "Clear all detection history?"
+        );
+
+
+      if (!confirmed) return;
+
+
+      detectionHistory = [];
+
+      localStorage.removeItem(
+        "detectionHistory"
+      );
+
+      renderHistory();
+      renderAlerts();
+
+    }
+  );
 
 }
 
 
-/* =========================================================
+function renderHistory() {
+
+  const container =
+    document.getElementById(
+      "historyList"
+    );
+
+
+  if (!container) return;
+
+
+  if (
+    detectionHistory.length === 0
+  ) {
+
+    container.innerHTML = `
+      <div class="empty-history">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <p>No detection history yet.</p>
+        <span>Run an AI detection to create a record.</span>
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    detectionHistory
+      .slice(0, 15)
+      .map(record => {
+
+        const healthy =
+          record.name === "Healthy Leaf";
+
+
+        return `
+          <div class="history-item">
+
+            <div class="history-left">
+
+              <div class="history-icon ${
+                healthy ? "healthy" : ""
+              }">
+
+                <i class="fa-solid ${
+                  healthy
+                    ? "fa-leaf"
+                    : "fa-triangle-exclamation"
+                }"></i>
+
+              </div>
+
+              <div>
+
+                <strong>
+                  ${escapeHTML(record.name)}
+                </strong>
+
+                <small>
+                  ${formatDate(record.timestamp)}
+                </small>
+
+              </div>
+
+            </div>
+
+
+            <div class="history-right">
+
+              <span>
+                ${record.confidence}%
+                confidence
+              </span>
+
+              ${
+                healthy
+                  ? `<span class="email-sent">
+                      Healthy
+                    </span>`
+                  : record.emailSent
+                    ? `<span class="email-sent">
+                        <i class="fa-solid fa-check"></i>
+                        Email Sent
+                      </span>`
+                    : `<span class="email-failed">
+                        <i class="fa-solid fa-xmark"></i>
+                        Email Pending/Failed
+                      </span>`
+              }
+
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+}
+
+
+function renderAlerts() {
+
+  const container =
+    document.getElementById(
+      "alertsList"
+    );
+
+  const badge =
+    document.getElementById(
+      "alertCountBadge"
+    );
+
+
+  if (!container) return;
+
+
+  const pestAlerts =
+    detectionHistory.filter(
+      item =>
+        item.name !== "Healthy Leaf"
+    );
+
+
+  badge.textContent =
+    pestAlerts.length +
+    (pestAlerts.length === 1
+      ? " Alert"
+      : " Alerts");
+
+
+  if (pestAlerts.length === 0) {
+
+    container.innerHTML = `
+      <div class="empty-alerts">
+        <i class="fa-solid fa-bell-slash"></i>
+        <p>No alerts yet.</p>
+        <span>Detected pests will appear here.</span>
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    pestAlerts
+      .slice(0, 10)
+      .map(record => {
+
+        return `
+          <div class="alert-item">
+
+            <div class="alert-left">
+
+              <div class="alert-icon">
+                <i class="fa-solid fa-bug"></i>
+              </div>
+
+              <div>
+
+                <strong>
+                  ${escapeHTML(record.name)}
+                </strong>
+
+                <small>
+                  ${formatDate(record.timestamp)}
+                </small>
+
+              </div>
+
+            </div>
+
+
+            <div class="alert-right">
+
+              <span>
+                ${record.confidence}% confidence
+              </span>
+
+              ${
+                record.emailSent
+                  ? `<span class="email-sent">
+                      <i class="fa-solid fa-envelope-circle-check"></i>
+                      Email Sent
+                    </span>`
+                  : `<span class="email-failed">
+                      <i class="fa-solid fa-envelope"></i>
+                      ${escapeHTML(
+                        record.emailMessage ||
+                        "Email pending"
+                      )}
+                    </span>`
+              }
+
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+}
+
+
+/* =========================
    DASHBOARD STATS
-========================================================= */
+========================= */
 
 function updateDashboardStats() {
 
-  const total =
-    document.getElementById("totalDetections");
-
-  const threats =
-    document.getElementById("activeThreats");
-
-  const emails =
-    document.getElementById("emailAlerts");
+  document.getElementById(
+    "totalDetections"
+  ).textContent =
+    totalDetections;
 
 
-  if (total) {
-    total.textContent =
-      totalDetections;
-  }
+  document.getElementById(
+    "activeThreats"
+  ).textContent =
+    activeThreats;
 
-  if (threats) {
-    threats.textContent =
-      activeThreats;
-  }
 
-  if (emails) {
-    emails.textContent =
-      emailAlerts;
-  }
+  document.getElementById(
+    "emailAlerts"
+  ).textContent =
+    emailAlerts;
 
 }
 
 
-/* =========================================================
+/* =========================
    PEST CHART
-   Each pest gets its own bar.
-========================================================= */
+========================= */
 
 function updatePestChart() {
 
   const canvas =
-    document.getElementById("pestChart");
+    document.getElementById(
+      "pestChart"
+    );
 
-  if (!canvas) {
-    return;
-  }
+
+  if (!canvas) return;
 
 
   const data = [
+
     pestCounts.Aphid,
+
     pestCounts.Caterpillar,
+
     pestCounts.Whitefly,
+
     pestCounts.Thrips,
+
     pestCounts["Healthy Leaf"]
+
   ];
 
 
   if (pestChart) {
 
-    pestChart.data.datasets[0].data =
-      data;
-
-    pestChart.update();
-
-    return;
+    pestChart.destroy();
 
   }
 
 
   pestChart =
-    new Chart(
-      canvas.getContext("2d"),
-      {
-        type: "bar",
+    new Chart(canvas, {
 
-        data: {
+      type: "bar",
 
-          labels: [
-            "Aphid",
-            "Caterpillar",
-            "Whitefly",
-            "Thrips",
-            "Healthy Leaf"
-          ],
+      data: {
 
-          datasets: [
-            {
-              label: "Detections",
+        labels: [
+          "Aphid",
+          "Caterpillar",
+          "Whitefly",
+          "Thrips",
+          "Healthy Leaf"
+        ],
 
-              data: data,
+        datasets: [{
 
-              backgroundColor: [
-                "#ff6678",
-                "#f6c85f",
-                "#5ea7ff",
-                "#a982ff",
-                "#39d98a"
-              ],
+          label: "Detections",
 
-              borderRadius: 8,
+          data: data,
 
-              borderWidth: 0
-            }
-          ]
+          borderRadius: 7,
+
+          borderWidth: 0
+
+        }]
+
+      },
+
+      options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        plugins: {
+
+          legend: {
+            display: false
+          }
 
         },
 
-        options: {
+        scales: {
 
-          responsive: true,
+          x: {
 
-          maintainAspectRatio: false,
+            ticks: {
+              color: "#789789",
+              font: {
+                size: 10
+              }
+            },
 
-          plugins: {
-
-            legend: {
+            grid: {
               display: false
             }
 
           },
 
-          scales: {
+          y: {
 
-            x: {
-              ticks: {
-                color: "#91a99d"
-              },
+            beginAtZero: true,
 
-              grid: {
-                display: false
-              }
+            ticks: {
+              color: "#789789",
+              precision: 0
             },
 
-            y: {
-
-              beginAtZero: true,
-
-              ticks: {
-                color: "#91a99d",
-                precision: 0
-              },
-
-              grid: {
-                color: "rgba(100,140,120,0.12)"
-              }
-
+            grid: {
+              color: "#18372a"
             }
 
           }
@@ -1451,23 +1591,25 @@ function updatePestChart() {
         }
 
       }
-    );
+
+    });
 
 }
 
 
-/* =========================================================
+/* =========================
    TREND CHART
-========================================================= */
+========================= */
 
 function updateTrendChart() {
 
   const canvas =
-    document.getElementById("trendChart");
+    document.getElementById(
+      "trendChart"
+    );
 
-  if (!canvas) {
-    return;
-  }
+
+  if (!canvas) return;
 
 
   const recent =
@@ -1477,119 +1619,97 @@ function updateTrendChart() {
 
 
   const labels =
-    recent.map((item, index) => {
-
-      return item.timestamp
-        ? item.timestamp.toLocaleTimeString([], {
+    recent.map(
+      record =>
+        new Date(
+          record.timestamp
+        ).toLocaleTimeString(
+          [],
+          {
             hour: "2-digit",
             minute: "2-digit"
-          })
-        : `#${index + 1}`;
-
-    });
+          }
+        )
+    );
 
 
   const values =
     recent.map(
-      item => item.confidence
+      () => 1
     );
 
 
   if (trendChart) {
 
-    trendChart.data.labels =
-      labels;
-
-    trendChart.data.datasets[0].data =
-      values;
-
-    trendChart.update();
-
-    return;
+    trendChart.destroy();
 
   }
 
 
   trendChart =
-    new Chart(
-      canvas.getContext("2d"),
-      {
+    new Chart(canvas, {
 
-        type: "line",
+      type: "line",
 
-        data: {
+      data: {
 
-          labels: labels,
+        labels: labels,
 
-          datasets: [
-            {
-              label: "Confidence",
+        datasets: [{
 
-              data: values,
+          label: "Detections",
 
-              borderColor: "#59dc8d",
+          data: values,
 
-              backgroundColor:
-                "rgba(89,220,141,0.10)",
+          tension: 0.35,
 
-              fill: true,
+          fill: false,
 
-              tension: 0.35,
+          pointRadius: 4
 
-              pointRadius: 4,
+        }]
 
-              pointBackgroundColor:
-                "#59dc8d"
-            }
-          ]
+      },
+
+      options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        plugins: {
+
+          legend: {
+            display: false
+          }
 
         },
 
-        options: {
+        scales: {
 
-          responsive: true,
+          x: {
 
-          maintainAspectRatio: false,
-
-          scales: {
-
-            x: {
-
-              ticks: {
-                color: "#91a99d"
-              },
-
-              grid: {
-                display: false
-              }
-
+            ticks: {
+              color: "#789789"
             },
 
-            y: {
-
-              min: 0,
-
-              max: 100,
-
-              ticks: {
-                color: "#91a99d",
-                callback: value => value + "%"
-              },
-
-              grid: {
-                color: "rgba(100,140,120,0.12)"
-              }
-
+            grid: {
+              display: false
             }
 
           },
 
-          plugins: {
+          y: {
 
-            legend: {
-              labels: {
-                color: "#a5b9ae"
-              }
+            beginAtZero: true,
+
+            ticks: {
+              color: "#789789",
+              precision: 0
+            },
+
+            grid: {
+              color: "#18372a"
             }
 
           }
@@ -1597,185 +1717,48 @@ function updateTrendChart() {
         }
 
       }
-    );
+
+    });
 
 }
 
 
-/* =========================================================
-   ADD DETECTION ALERT
-========================================================= */
+/* =========================
+   DATE FORMAT
+========================= */
 
-function addDetectionAlert(
-  pestName,
-  confidence,
-  historyRecord
-) {
+function formatDate(value) {
 
-  renderAlerts();
+  const date =
+    new Date(value);
+
+
+  if (Number.isNaN(
+    date.getTime()
+  )) {
+
+    return "Unknown time";
+
+  }
+
+
+  return date.toLocaleString(
+    [],
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  );
 
 }
 
 
-/* =========================================================
-   RENDER ALERTS
-========================================================= */
-
-function renderAlerts() {
-
-  const alertsList =
-    document.getElementById("alertsList");
-
-  if (!alertsList) {
-    return;
-  }
-
-
-  if (detectionHistory.length === 0) {
-
-    alertsList.innerHTML = `
-
-      <div class="empty-alerts">
-
-        <i class="fa-solid fa-bell-slash"></i>
-
-        <p>No alerts yet.</p>
-
-        <span>Detected pests will appear here.</span>
-
-      </div>
-
-    `;
-
-    return;
-
-  }
-
-
-  alertsList.innerHTML =
-    detectionHistory
-      .slice(0, 10)
-      .map(item => {
-
-        const isHealthy =
-          item.name === "Healthy Leaf";
-
-
-        const emailText =
-          isHealthy
-            ? "No pest alert required"
-            : item.emailSent
-              ? "Email alert sent"
-              : "Email alert not sent";
-
-
-        return `
-
-          <div class="alert-item ${isHealthy ? "healthy" : ""}">
-
-            <div class="alert-icon">
-
-              <i class="fa-solid ${
-                isHealthy
-                  ? "fa-circle-check"
-                  : "fa-bug"
-              }"></i>
-
-            </div>
-
-
-            <div class="alert-main">
-
-              <strong>
-                ${escapeHTML(item.name)}
-              </strong>
-
-              <span>
-                Confidence: ${item.confidence}%
-                •
-                ${emailText}
-              </span>
-
-            </div>
-
-
-            <div class="alert-time">
-
-              ${formatTime(item.timestamp)}
-
-            </div>
-
-          </div>
-
-        `;
-
-      })
-      .join("");
-
-}
-
-
-/* =========================================================
-   FORMAT TIME
-========================================================= */
-
-function formatTime(date) {
-
-  if (!(date instanceof Date)) {
-    return "";
-  }
-
-
-  return date.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-}
-
-
-/* =========================================================
-   ERROR MESSAGE
-========================================================= */
-
-function getErrorMessage(error) {
-
-  if (!error) {
-    return "Unknown error";
-  }
-
-
-  if (typeof error === "string") {
-    return error;
-  }
-
-
-  if (error.text) {
-    return error.text;
-  }
-
-
-  if (error.message) {
-    return error.message;
-  }
-
-
-  try {
-
-    return JSON.stringify(error);
-
-  } catch {
-
-    return "Unknown error";
-
-  }
-
-}
-
-
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
+/* =========================
+   SECURITY HELPER
+========================= */
 
 function escapeHTML(value) {
 
