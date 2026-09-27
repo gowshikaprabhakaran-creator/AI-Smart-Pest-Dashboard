@@ -104,6 +104,10 @@ body {
 }
 
 
+/* =========================================================
+   TEAM BOX
+========================================================= */
+
 .team-box {
     margin-top: 35px;
 
@@ -115,7 +119,29 @@ body {
 
     font-size: 13px;
 
-    line-height: 1.6;
+    line-height: 1.7;
+
+    display: block;
+
+    color: white;
+}
+
+
+.team-box strong {
+    display: block;
+
+    font-size: 15px;
+
+    margin-bottom: 5px;
+
+    color: #ffffff;
+}
+
+
+.team-box p {
+    color: #d8e7dc;
+
+    margin: 2px 0;
 }
 
 
@@ -781,7 +807,7 @@ footer strong {
 
 
 /* =========================================================
-   MOBILE
+   TABLET
 ========================================================= */
 
 @media (max-width: 1000px) {
@@ -799,6 +825,10 @@ footer strong {
 }
 
 
+/* =========================================================
+   MOBILE
+========================================================= */
+
 @media (max-width: 750px) {
 
     .sidebar {
@@ -809,6 +839,13 @@ footer strong {
         height: auto;
 
         padding: 15px;
+
+        overflow: visible;
+    }
+
+
+    .logo {
+        margin-bottom: 18px;
     }
 
 
@@ -816,16 +853,46 @@ footer strong {
         flex-direction: row;
 
         overflow-x: auto;
+
+        padding-bottom: 5px;
     }
 
 
     .nav-link {
         white-space: nowrap;
+
+        flex-shrink: 0;
     }
 
 
+    /* Team members are intentionally visible on phones */
+
     .team-box {
-        display: none;
+        display: block;
+
+        margin-top: 18px;
+
+        width: 100%;
+
+        padding: 14px;
+
+        border-radius: 12px;
+
+        background: #173c25;
+
+        text-align: left;
+    }
+
+
+    .team-box strong {
+        font-size: 15px;
+    }
+
+
+    .team-box p {
+        font-size: 13px;
+
+        line-height: 1.7;
     }
 
 
@@ -865,7 +932,43 @@ footer strong {
 }
 
 
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
 @media (max-width: 480px) {
+
+    .sidebar {
+        padding: 14px;
+    }
+
+
+    .logo h2 {
+        font-size: 17px;
+    }
+
+
+    .team-box {
+        margin-top: 16px;
+
+        padding: 13px;
+    }
+
+
+    .team-box strong {
+        font-size: 14px;
+    }
+
+
+    .team-box p {
+        font-size: 12px;
+    }
+
+
+    .main-content {
+        padding: 15px;
+    }
+
 
     .stats-grid,
     .sensor-grid {
@@ -889,6 +992,11 @@ footer strong {
         gap: 10px;
 
         flex-direction: column;
+    }
+
+
+    .result-box h1 {
+        font-size: 27px;
     }
 
 }
