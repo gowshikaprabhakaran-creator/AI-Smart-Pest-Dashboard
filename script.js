@@ -1,7 +1,7 @@
 // ============================================================
 // AI SMART PEST DETECTION & ALERT SYSTEM
 // TEAM 16
-// REAL TEACHABLE MACHINE MODEL
+// AUTOMATIC AI DETECTION
 // ============================================================
 
 
@@ -9,15 +9,15 @@
 // CONFIGURATION
 // ============================================================
 
-// Teachable Machine model folder
 const MODEL_URL = "./model/";
 
-// Cache-busting version
-// Change this number whenever the model files are updated.
-const MODEL_VERSION = "20260926-2";
+const MODEL_VERSION = "20260927-4";
 
 
-// EmailJS
+// ============================================================
+// EMAILJS
+// ============================================================
+
 const EMAIL_SERVICE_ID =
     "service_x2d7sj";
 
@@ -33,27 +33,28 @@ const EMAIL_PUBLIC_KEY =
 // ============================================================
 
 let model = null;
+
 let modelLoaded = false;
 
 let uploadedImage = null;
+
 let cameraStream = null;
 
 let currentCamera = "environment";
 
 let totalDetections = 0;
+
 let activeThreats = 0;
+
 let emailAlerts = 0;
 
 let detectionHistory = [];
 
+let pestChart = null;
 
-// ============================================================
-// EMAILJS INITIALIZATION
-// ============================================================
+let trendChart = null;
 
-emailjs.init({
-    publicKey: EMAIL_PUBLIC_KEY
-});
+let isDetecting = false;
 
 
 // ============================================================
@@ -64,17 +65,31 @@ document.addEventListener(
     "DOMContentLoaded",
     async function () {
 
+        console.log(
+            "AI Smart Pest Detection - Team 16"
+        );
+
+
         setupImageUpload();
+
         setupCamera();
-        setupDetectionButton();
+
         setupLanguage();
+
         setupNavigation();
 
         updateSensorDisplay();
 
+        initializeEmailJS();
+
         await loadAIModel();
 
         updateDashboard();
+
+        updateHistory();
+
+        updateAlerts();
+
         updateCharts();
 
     }
@@ -82,13 +97,49 @@ document.addEventListener(
 
 
 // ============================================================
-// LOAD TEACHABLE MACHINE MODEL
+// EMAILJS INITIALIZATION
+// ============================================================
+
+function initializeEmailJS() {
+
+    try {
+
+        emailjs.init({
+
+            publicKey:
+                EMAIL_PUBLIC_KEY
+
+        });
+
+
+        console.log(
+            "EmailJS initialized."
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "EmailJS initialization error:",
+            error
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// LOAD AI MODEL
 // ============================================================
 
 async function loadAIModel() {
 
     const status =
-        document.getElementById("modelStatus");
+        document.getElementById(
+            "modelStatus"
+        );
+
 
     try {
 
@@ -97,28 +148,17 @@ async function loadAIModel() {
             status.textContent =
                 "Loading AI Model...";
 
+            status.className =
+                "model-status";
+
         }
 
 
-        console.log(
-            "================================"
-        );
-
-        console.log(
-            "Loading Teachable Machine Model"
-        );
-
-        console.log(
-            "Model version:",
-            MODEL_VERSION
-        );
-
-
-        // Cache-busting URLs
         const modelFile =
             MODEL_URL +
             "model.json?v=" +
             MODEL_VERSION;
+
 
         const metadataFile =
             MODEL_URL +
@@ -127,13 +167,8 @@ async function loadAIModel() {
 
 
         console.log(
-            "Model URL:",
+            "Loading model:",
             modelFile
-        );
-
-        console.log(
-            "Metadata URL:",
-            metadataFile
         );
 
 
@@ -152,13 +187,9 @@ async function loadAIModel() {
         );
 
 
-        // Show model class names
-        const classNames =
-            model.getClassLabels();
-
         console.log(
-            "AI Classes:",
-            classNames
+            "AI classes:",
+            model.getClassLabels()
         );
 
 
@@ -171,11 +202,6 @@ async function loadAIModel() {
                 "model-status model-ready";
 
         }
-
-
-        console.log(
-            "================================"
-        );
 
 
     } catch (error) {
@@ -212,6 +238,7 @@ async function loadAIModel() {
 
 // ============================================================
 // IMAGE UPLOAD
+// AUTOMATIC DETECTION AFTER IMAGE LOAD
 // ============================================================
 
 function setupImageUpload() {
@@ -248,7 +275,7 @@ function setupImageUpload() {
 
 
                     uploadedImage.onload =
-                        function () {
+                        async function () {
 
                             const preview =
                                 document.getElementById(
@@ -265,6 +292,25 @@ function setupImageUpload() {
                                     "block";
 
                             }
+
+
+                            console.log(
+                                "Image uploaded."
+                            );
+
+
+                            // AUTOMATIC DETECTION
+                            await detectPest();
+
+                        };
+
+
+                    uploadedImage.onerror =
+                        function () {
+
+                            alert(
+                                "Could not load this image."
+                            );
 
                         };
 
@@ -359,14 +405,30 @@ async function startCamera() {
 
     try {
 
+        if (
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ) {
+
+            alert(
+                "Camera is not supported by this browser."
+            );
+
+            return;
+
+        }
+
+
         cameraStream =
             await navigator.mediaDevices.getUserMedia({
 
                 video: {
 
                     facingMode: {
+
                         ideal:
                             currentCamera
+
                     }
 
                 },
@@ -378,10 +440,6 @@ async function startCamera() {
 
         video.srcObject =
             cameraStream;
-
-
-        video.style.display =
-            "block";
 
 
         await video.play();
@@ -465,9 +523,10 @@ function stopCamera() {
 
 // ============================================================
 // CAPTURE IMAGE
+// AUTOMATIC DETECTION AFTER CAPTURE
 // ============================================================
 
-function captureImage() {
+async function captureImage() {
 
     const video =
         document.getElementById(
@@ -512,6 +571,7 @@ function captureImage() {
     canvas.width =
         video.videoWidth;
 
+
     canvas.height =
         video.videoHeight;
 
@@ -542,7 +602,7 @@ function captureImage() {
 
 
     uploadedImage.onload =
-        function () {
+        async function () {
 
             const preview =
                 document.getElementById(
@@ -560,6 +620,15 @@ function captureImage() {
 
             }
 
+
+            console.log(
+                "Image captured."
+            );
+
+
+            // AUTOMATIC AI DETECTION
+            await detectPest();
+
         };
 
 
@@ -570,33 +639,21 @@ function captureImage() {
 
 
 // ============================================================
-// DETECTION BUTTON
-// ============================================================
-
-function setupDetectionButton() {
-
-    const button =
-        document.getElementById(
-            "detectButton"
-        );
-
-
-    if (!button) return;
-
-
-    button.addEventListener(
-        "click",
-        detectPest
-    );
-
-}
-
-
-// ============================================================
 // RUN AI DETECTION
 // ============================================================
 
 async function detectPest() {
+
+    if (isDetecting) {
+
+        console.log(
+            "Detection already running."
+        );
+
+        return;
+
+    }
+
 
     if (!uploadedImage) {
 
@@ -623,13 +680,16 @@ async function detectPest() {
     }
 
 
+    isDetecting = true;
+
+
     showLoading();
 
 
     try {
 
         console.log(
-            "Starting AI prediction..."
+            "Starting automatic AI detection..."
         );
 
 
@@ -640,10 +700,6 @@ async function detectPest() {
             );
 
 
-        // ====================================================
-        // DEBUG: SHOW ALL AI PREDICTIONS
-        // ====================================================
-
         console.log(
             "========== AI PREDICTIONS =========="
         );
@@ -653,6 +709,7 @@ async function detectPest() {
             function (prediction) {
 
                 console.log(
+
                     prediction.className +
                     " : " +
                     (
@@ -660,6 +717,7 @@ async function detectPest() {
                         100
                     ).toFixed(2) +
                     "%"
+
                 );
 
             }
@@ -670,10 +728,6 @@ async function detectPest() {
             "===================================="
         );
 
-
-        // ====================================================
-        // FIND HIGHEST PREDICTION
-        // ====================================================
 
         let bestPrediction =
             predictions[0];
@@ -698,24 +752,16 @@ async function detectPest() {
         }
 
 
-        const pestName =
-            bestPrediction.className;
-
-
-        const confidence =
-            (
-                bestPrediction.probability *
-                100
-            ).toFixed(1);
-
-
         const result = {
 
             name:
-                pestName,
+                bestPrediction.className,
 
             confidence:
-                confidence,
+                (
+                    bestPrediction.probability *
+                    100
+                ).toFixed(1),
 
             probability:
                 bestPrediction.probability
@@ -730,19 +776,26 @@ async function detectPest() {
         );
 
 
-        displayResult(result);
+        displayResult(
+            result
+        );
 
-        saveDetection(result);
+
+        saveDetection(
+            result
+        );
 
 
-        // Email only when actual pest is detected
-        if (
-            pestName
+        const isHealthy =
+            result.name
                 .trim()
                 .toLowerCase()
-                !==
-            "healthy leaf"
-        ) {
+            ===
+            "healthy leaf";
+
+
+        // SEND EMAIL FOR PEST
+        if (!isHealthy) {
 
             await sendEmailAlert(
                 result
@@ -764,10 +817,31 @@ async function detectPest() {
         );
 
 
+        const status =
+            document.getElementById(
+                "detectionStatus"
+            );
+
+
+        if (status) {
+
+            status.textContent =
+                "Detection Failed";
+
+            status.className =
+                "detection-status status-danger";
+
+        }
+
+
         alert(
             "AI detection failed.\n\n" +
             error.message
         );
+
+    } finally {
+
+        isDetecting = false;
 
     }
 
@@ -874,7 +948,7 @@ function displayResult(result) {
             result.name
                 .trim()
                 .toLowerCase()
-                ===
+            ===
             "healthy leaf";
 
 
@@ -917,7 +991,8 @@ function saveDetection(result) {
             result.name,
 
         confidence:
-            result.confidence + "%",
+            result.confidence +
+            "%",
 
         date:
             now.toLocaleDateString(),
@@ -950,7 +1025,7 @@ function saveDetection(result) {
         result.name
             .trim()
             .toLowerCase()
-            !==
+        !==
         "healthy leaf"
     ) {
 
@@ -967,51 +1042,81 @@ function saveDetection(result) {
 
 
 // ============================================================
-// SEND EMAIL ALERT
+// EMAIL ALERT
 // ============================================================
 
-async function sendEmailAlert(
-    result
-) {
+async function sendEmailAlert(result) {
+
+    console.log(
+        "Sending pest email alert..."
+    );
+
 
     try {
 
-        await emailjs.send(
+        const templateParams = {
 
-            EMAIL_SERVICE_ID,
+            pest_name:
+                result.name,
 
-            EMAIL_TEMPLATE_ID,
+            confidence:
+                result.confidence +
+                "%",
 
-            {
+            status:
+                "Pest Detected"
 
-                pest_name:
-                    result.name,
-
-                confidence:
-                    result.confidence +
-                    "%",
-
-                status:
-                    "Pest Detected"
-
-            }
-
-        );
+        };
 
 
-        emailAlerts++;
+        const response =
+            await emailjs.send(
+
+                EMAIL_SERVICE_ID,
+
+                EMAIL_TEMPLATE_ID,
+
+                templateParams
+
+            );
 
 
         console.log(
-            "Email alert sent."
+            "EmailJS response:",
+            response
         );
+
+
+        if (
+            response &&
+            response.status === 200
+        ) {
+
+            emailAlerts++;
+
+
+            console.log(
+                "Email alert sent successfully."
+            );
+
+
+            showEmailMessage(
+                "📧 Email alert sent successfully."
+            );
+
+        }
 
 
     } catch (error) {
 
         console.error(
-            "Email error:",
+            "EmailJS error:",
             error
+        );
+
+
+        showEmailMessage(
+            "⚠️ Email alert failed. Check EmailJS settings."
         );
 
     }
@@ -1020,7 +1125,77 @@ async function sendEmailAlert(
 
 
 // ============================================================
-// DASHBOARD COUNTERS
+// EMAIL MESSAGE
+// ============================================================
+
+function showEmailMessage(message) {
+
+    const status =
+        document.getElementById(
+            "detectionStatus"
+        );
+
+
+    if (!status) return;
+
+
+    status.textContent =
+        message;
+
+
+    status.className =
+        "detection-status";
+
+
+    setTimeout(
+        function () {
+
+            const pestName =
+                document.getElementById(
+                    "pestName"
+                );
+
+
+            if (!pestName) return;
+
+
+            const currentResult =
+                pestName.textContent;
+
+
+            if (
+                currentResult
+                    .trim()
+                    .toLowerCase()
+                ===
+                "healthy leaf"
+            ) {
+
+                status.textContent =
+                    "Healthy Leaf";
+
+                status.className =
+                    "detection-status status-safe";
+
+            } else {
+
+                status.textContent =
+                    "Pest Detected";
+
+                status.className =
+                    "detection-status status-danger";
+
+            }
+
+        },
+        4000
+    );
+
+}
+
+
+// ============================================================
+// DASHBOARD
 // ============================================================
 
 function updateDashboard() {
@@ -1070,7 +1245,7 @@ function updateDashboard() {
 
 
 // ============================================================
-// HISTORY TABLE
+// HISTORY
 // ============================================================
 
 function updateHistory() {
@@ -1139,11 +1314,13 @@ function updateAlerts() {
             function (item) {
 
                 return (
+
                     item.pest
                         .trim()
                         .toLowerCase()
                     !==
                     "healthy leaf"
+
                 );
 
             }
@@ -1218,10 +1395,6 @@ function updateAlerts() {
 // CHARTS
 // ============================================================
 
-let pestChart = null;
-let trendChart = null;
-
-
 function updateCharts() {
 
     const pestCanvas =
@@ -1253,11 +1426,13 @@ function updateCharts() {
         function (item) {
 
             if (
+
                 item.pest
                     .trim()
                     .toLowerCase()
                 !==
                 "healthy leaf"
+
             ) {
 
                 if (
@@ -1555,9 +1730,7 @@ function setupLanguage() {
 }
 
 
-function changeLanguage(
-    language
-) {
+function changeLanguage(language) {
 
     const elements =
         document.querySelectorAll(
@@ -1642,7 +1815,7 @@ function setupNavigation() {
 
 
 // ============================================================
-// CLEANUP CAMERA
+// CAMERA CLEANUP
 // ============================================================
 
 window.addEventListener(
