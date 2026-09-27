@@ -1,26 +1,23 @@
 /* =========================================================
    AI SMART PEST DETECTION & ALERT SYSTEM
-   Team 16
+   TEAM 16
    ========================================================= */
 
-/* =========================
-   EMAILJS CONFIGURATION
-   ========================= */
+
+/* ================= EMAILJS ================= */
 
 const EMAIL_SERVICE_ID = "service_x2d7sjh";
 const EMAIL_TEMPLATE_ID = "template_6efhw0d";
 const EMAIL_PUBLIC_KEY = "wOORs4b9toARevid-";
 
-/* =========================
-   MODEL CONFIGURATION
-   ========================= */
+
+/* ================= AI MODEL ================= */
 
 const MODEL_URL = "./model/model.json";
 const METADATA_URL = "./model/metadata.json";
 
-/* =========================
-   GLOBAL VARIABLES
-   ========================= */
+
+/* ================= GLOBAL VARIABLES ================= */
 
 let model = null;
 let maxPredictions = 0;
@@ -29,26 +26,21 @@ let cameraStream = null;
 let currentFacingMode = "environment";
 
 let detectionHistory = [];
+
 let pestAlerts = 0;
 let emailAlerts = 0;
 
 let pestChart = null;
 let trendChart = null;
 
-let currentLanguage = "en";
 
+/* ================= PAGE LOAD ================= */
 
-/* =========================================================
-   DOM READY
-   ========================================================= */
+document.addEventListener("DOMContentLoaded", async () => {
 
-document.addEventListener("DOMContentLoaded", () => {
-
-    console.log("Dashboard loaded.");
+    console.log("Smart Pest Dashboard loaded.");
 
     initializeEmailJS();
-
-    setupEmail();
 
     setupNavigation();
 
@@ -56,13 +48,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setupUpload();
 
+    setupEmail();
+
     setupLanguage();
 
     loadHistory();
 
     updateDashboard();
-
-    setupCharts();
 
     loadModel();
 
@@ -70,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /* =========================================================
-   EMAILJS
+   EMAILJS INITIALIZATION
    ========================================================= */
 
 function initializeEmailJS() {
@@ -79,13 +71,7 @@ function initializeEmailJS() {
 
         if (typeof emailjs === "undefined") {
 
-            console.error(
-                "EmailJS library not loaded."
-            );
-
-            showEmailMessage(
-                "❌ EmailJS library not loaded."
-            );
+            console.error("EmailJS library not loaded.");
 
             return;
         }
@@ -94,9 +80,7 @@ function initializeEmailJS() {
             publicKey: EMAIL_PUBLIC_KEY
         });
 
-        console.log(
-            "EmailJS initialized successfully."
-        );
+        console.log("EmailJS initialized.");
 
     } catch (error) {
 
@@ -106,11 +90,12 @@ function initializeEmailJS() {
         );
 
     }
+
 }
 
 
 /* =========================================================
-   DEMO EMAIL SETUP
+   EMAIL SETUP
    ========================================================= */
 
 function setupEmail() {
@@ -121,33 +106,22 @@ function setupEmail() {
     const saveButton =
         document.getElementById("saveEmail");
 
-
     if (!emailInput || !saveButton) {
-
-        console.log(
-            "Demo email elements not found."
-        );
-
         return;
     }
 
-
     const savedEmail =
-        localStorage.getItem(
-            "demoAlertEmail"
-        );
-
+        localStorage.getItem("demoAlertEmail");
 
     if (savedEmail) {
 
-        emailInput.value =
-            savedEmail;
+        emailInput.value = savedEmail;
 
         updateEmailStatus(
-            savedEmail
+            "Saved email: " + savedEmail
         );
-    }
 
+    }
 
     saveButton.addEventListener(
         "click",
@@ -158,62 +132,49 @@ function setupEmail() {
 
 
 /* =========================================================
-   SAVE DEMO EMAIL
+   SAVE EMAIL
    ========================================================= */
 
 function saveEmail() {
 
-    const emailInput =
-        document.getElementById(
-            "alertEmail"
-        );
+    const input =
+        document.getElementById("alertEmail");
 
-
-    if (!emailInput) {
+    if (!input) {
         return;
     }
 
-
     const email =
-        emailInput.value.trim();
-
+        input.value.trim();
 
     if (!email) {
 
-        alert(
-            "Please enter an email address."
+        updateEmailStatus(
+            "⚠️ Please enter an email address."
         );
 
         return;
     }
-
 
     if (
         !email.includes("@") ||
         !email.includes(".")
     ) {
 
-        alert(
-            "Please enter a valid email address."
+        updateEmailStatus(
+            "⚠️ Please enter a valid email address."
         );
 
         return;
     }
-
 
     localStorage.setItem(
         "demoAlertEmail",
         email
     );
 
-
     updateEmailStatus(
-        email
-    );
-
-
-    alert(
-        "Demo alert email saved successfully!"
+        "✅ Email saved: " + email
     );
 
 }
@@ -223,45 +184,14 @@ function saveEmail() {
    EMAIL STATUS
    ========================================================= */
 
-function updateEmailStatus(email) {
+function updateEmailStatus(message) {
 
     const status =
-        document.getElementById(
-            "emailStatus"
-        );
-
-
-    if (!status) {
-        return;
-    }
-
-
-    status.textContent =
-        "Saved email: " + email;
-
-}
-
-
-/* =========================================================
-   EMAIL MESSAGE
-   ========================================================= */
-
-function showEmailMessage(message) {
-
-    const status =
-        document.getElementById(
-            "emailStatus"
-        );
-
+        document.getElementById("emailStatus");
 
     if (status) {
-
-        status.textContent =
-            message;
+        status.textContent = message;
     }
-
-
-    console.log(message);
 
 }
 
@@ -272,85 +202,45 @@ function showEmailMessage(message) {
 
 async function sendEmailAlert(result) {
 
-    console.log(
-        "Preparing pest email alert..."
-    );
-
-
     const savedEmail =
-        localStorage.getItem(
-            "demoAlertEmail"
-        );
-
-
-    /* -------------------------
-       CHECK SAVED EMAIL
-       ------------------------- */
+        localStorage.getItem("demoAlertEmail");
 
     if (!savedEmail) {
 
-        showEmailMessage(
-            "⚠️ Please save a demo email first."
+        updateEmailStatus(
+            "⚠️ Save an email address first."
         );
-
-
-        alert(
-            "Pest detected!\n\n" +
-            "Please enter the email address " +
-            "for the demo alert and press Save Email."
-        );
-
 
         return;
     }
 
+    if (typeof emailjs === "undefined") {
 
-    /* -------------------------
-       CHECK EMAILJS
-       ------------------------- */
-
-    if (
-        typeof emailjs === "undefined"
-    ) {
-
-        showEmailMessage(
+        updateEmailStatus(
             "❌ EmailJS library is not loaded."
         );
 
-
-        console.error(
-            "EmailJS is undefined."
-        );
-
-
         return;
     }
-
 
     try {
 
         const templateParams = {
 
-            to_email:
-                savedEmail,
+            to_email: savedEmail,
 
-            pest_name:
-                result.name,
+            pest_name: result.name,
 
-            confidence:
-                result.confidence + "%",
+            confidence: result.confidence + "%",
 
-            status:
-                "Pest Detected"
+            status: "Pest Detected"
 
         };
 
-
         console.log(
-            "Sending email with:",
+            "Sending EmailJS alert:",
             templateParams
         );
-
 
         const response =
             await emailjs.send(
@@ -359,31 +249,19 @@ async function sendEmailAlert(result) {
                 templateParams
             );
 
-
         console.log(
             "EmailJS response:",
             response
         );
 
-
-        if (
-            response &&
-            response.status === 200
-        ) {
+        if (response.status === 200) {
 
             emailAlerts++;
 
             updateDashboard();
 
-
-            showEmailMessage(
-                "📧 Email alert sent to " +
-                savedEmail
-            );
-
-
-            console.log(
-                "Email alert sent successfully."
+            updateEmailStatus(
+                "📧 Alert sent to " + savedEmail
             );
 
         }
@@ -395,23 +273,13 @@ async function sendEmailAlert(result) {
             error
         );
 
-
-        const errorMessage =
+        const message =
             error?.text ||
             error?.message ||
             "Unknown EmailJS error";
 
-
-        showEmailMessage(
-            "❌ Email error: " +
-            errorMessage
-        );
-
-
-        alert(
-            "Email could not be sent.\n\n" +
-            "EmailJS says:\n" +
-            errorMessage
+        updateEmailStatus(
+            "❌ Email error: " + message
         );
 
     }
@@ -420,75 +288,47 @@ async function sendEmailAlert(result) {
 
 
 /* =========================================================
-   LOAD AI MODEL
+   LOAD MODEL
    ========================================================= */
 
 async function loadModel() {
 
     const status =
-        document.getElementById(
-            "modelStatus"
-        );
-
+        document.getElementById("modelStatus");
 
     try {
 
-        console.log(
-            "Loading AI model..."
-        );
-
-
-        if (
-            typeof tmImage === "undefined"
-        ) {
-
-            console.error(
-                "Teachable Machine library not loaded."
-            );
-
+        if (typeof tmImage === "undefined") {
 
             if (status) {
-
                 status.textContent =
-                    "❌ AI Model Library Not Loaded";
+                    "❌ AI library not loaded";
             }
-
 
             return;
         }
 
-
         model =
             await tmImage.load(
-                MODEL_URL +
-                "?v=20260927-7",
-
-                METADATA_URL +
-                "?v=20260927-7"
+                MODEL_URL + "?v=20260927",
+                METADATA_URL + "?v=20260927"
             );
-
 
         maxPredictions =
             model.getTotalClasses();
 
-
         console.log(
-            "AI model loaded successfully."
+            "AI model loaded.",
+            maxPredictions,
+            "classes"
         );
-
-
-        console.log(
-            "Classes:",
-            maxPredictions
-        );
-
 
         if (status) {
 
             status.textContent =
                 "✅ AI Model Ready";
-        }
 
+        }
 
     } catch (error) {
 
@@ -497,18 +337,12 @@ async function loadModel() {
             error
         );
 
-
         if (status) {
 
             status.textContent =
-                "❌ AI Model Loading Failed";
+                "❌ Model Loading Failed";
+
         }
-
-
-        alert(
-            "AI model could not be loaded.\n\n" +
-            "Please check the model folder."
-        );
 
     }
 
@@ -516,66 +350,49 @@ async function loadModel() {
 
 
 /* =========================================================
-   IMAGE UPLOAD
+   UPLOAD IMAGE
    ========================================================= */
 
 function setupUpload() {
 
     const input =
-        document.getElementById(
-            "imageInput"
-        );
-
+        document.getElementById("imageInput");
 
     if (!input) {
-
-        console.log(
-            "imageInput not found."
-        );
-
         return;
     }
 
-
     input.addEventListener(
         "change",
-        async function(event) {
+        event => {
 
             const file =
                 event.target.files[0];
-
 
             if (!file) {
                 return;
             }
 
-
-            const image =
+            const preview =
                 document.getElementById(
                     "previewImage"
                 );
 
-
-            if (!image) {
+            if (!preview) {
                 return;
             }
 
-
             const imageURL =
-                URL.createObjectURL(
-                    file
-                );
+                URL.createObjectURL(file);
 
-
-            image.src =
+            preview.src =
                 imageURL;
 
-
-            image.onload =
-                async function() {
+            preview.onload =
+                async () => {
 
                     await predictImage(
-                        image
+                        preview
                     );
 
                 };
@@ -587,7 +404,7 @@ function setupUpload() {
 
 
 /* =========================================================
-   AI PREDICTION
+   PREDICT IMAGE
    ========================================================= */
 
 async function predictImage(image) {
@@ -601,102 +418,63 @@ async function predictImage(image) {
         return;
     }
 
-
     try {
 
-        console.log(
-            "Running AI prediction..."
-        );
-
-
         const predictions =
-            await model.predict(
-                image
-            );
+            await model.predict(image);
 
-
-        let highestPrediction =
+        let bestPrediction =
             predictions[0];
 
+        predictions.forEach(
+            prediction => {
 
-        for (
-            let i = 1;
-            i < predictions.length;
-            i++
-        ) {
+                if (
+                    prediction.probability >
+                    bestPrediction.probability
+                ) {
 
-            if (
-                predictions[i].probability >
-                highestPrediction.probability
-            ) {
+                    bestPrediction =
+                        prediction;
 
-                highestPrediction =
-                    predictions[i];
+                }
+
             }
-
-        }
-
+        );
 
         const result = {
 
             name:
-                highestPrediction.className,
+                bestPrediction.className,
 
             confidence:
                 (
-                    highestPrediction.probability *
+                    bestPrediction.probability *
                     100
                 ).toFixed(1)
 
         };
-
-
-        console.log(
-            "Prediction:",
-            result
-        );
-
 
         displayPrediction(
             result,
             predictions
         );
 
-
-        saveDetection(
-            result
-        );
-
+        saveDetection(result);
 
         if (
-            !isHealthyLeaf(
-                result.name
-            )
+            !isHealthyLeaf(result.name)
         ) {
 
             pestAlerts++;
 
+            createPestAlert(result);
 
             updateDashboard();
 
-
-            createPestAlert(
-                result
-            );
-
-
-            await sendEmailAlert(
-                result
-            );
-
-        } else {
-
-            showEmailMessage(
-                "🌿 Healthy leaf detected."
-            );
+            await sendEmailAlert(result);
 
         }
-
 
     } catch (error) {
 
@@ -705,18 +483,13 @@ async function predictImage(image) {
             error
         );
 
-
-        alert(
-            "AI detection failed."
-        );
-
     }
 
 }
 
 
 /* =========================================================
-   DISPLAY PREDICTION
+   DISPLAY RESULT
    ========================================================= */
 
 function displayPrediction(
@@ -725,27 +498,20 @@ function displayPrediction(
 ) {
 
     const pestName =
-        document.getElementById(
-            "pestName"
-        );
-
+        document.getElementById("pestName");
 
     const confidence =
-        document.getElementById(
-            "confidence"
-        );
+        document.getElementById("confidence");
 
-
-    const detectionStatus =
-        document.getElementById(
-            "detectionStatus"
-        );
+    const status =
+        document.getElementById("detectionStatus");
 
 
     if (pestName) {
 
         pestName.textContent =
             result.name;
+
     }
 
 
@@ -753,81 +519,39 @@ function displayPrediction(
 
         confidence.textContent =
             result.confidence + "%";
+
     }
 
 
-    if (detectionStatus) {
+    if (status) {
 
         if (
-            isHealthyLeaf(
-                result.name
-            )
+            isHealthyLeaf(result.name)
         ) {
 
-            detectionStatus.textContent =
+            status.textContent =
                 "🌿 Healthy Leaf";
 
         } else {
 
-            detectionStatus.textContent =
+            status.textContent =
                 "⚠️ Pest Detected";
+
         }
 
     }
 
 
-    /* Update prediction bars
-       if they exist */
-
-    predictions.forEach(
-        prediction => {
-
-            const percentage =
-                (
-                    prediction.probability *
-                    100
-                ).toFixed(1);
-
-
-            const className =
-                prediction.className
-                    .replace(/\s+/g, "")
-                    .toLowerCase();
-
-
-            const bar =
-                document.getElementById(
-                    "bar-" + className
-                );
-
-
-            if (bar) {
-
-                bar.style.width =
-                    percentage + "%";
-            }
-
-
-            const value =
-                document.getElementById(
-                    "value-" + className
-                );
-
-
-            if (value) {
-
-                value.textContent =
-                    percentage + "%";
-            }
-
-        }
+    console.log(
+        "All AI prediction scores:",
+        predictions
     );
 
 }
 
 
 /* =========================================================
-   HEALTHY CHECK
+   HEALTHY LEAF CHECK
    ========================================================= */
 
 function isHealthyLeaf(name) {
@@ -840,7 +564,7 @@ function isHealthyLeaf(name) {
 
 
 /* =========================================================
-   CAMERA SETUP
+   CAMERA
    ========================================================= */
 
 function setupCamera() {
@@ -850,12 +574,10 @@ function setupCamera() {
             "startCamera"
         );
 
-
     const switchButton =
         document.getElementById(
             "switchCamera"
         );
-
 
     const captureButton =
         document.getElementById(
@@ -919,10 +641,8 @@ async function startCamera() {
             await navigator.mediaDevices.getUserMedia({
 
                 video: {
-
                     facingMode:
                         currentFacingMode
-
                 },
 
                 audio: false
@@ -931,9 +651,7 @@ async function startCamera() {
 
 
         const video =
-            document.getElementById(
-                "camera"
-            );
+            document.getElementById("camera");
 
 
         if (!video) {
@@ -948,11 +666,6 @@ async function startCamera() {
         await video.play();
 
 
-        console.log(
-            "Camera started."
-        );
-
-
     } catch (error) {
 
         console.error(
@@ -960,10 +673,8 @@ async function startCamera() {
             error
         );
 
-
         alert(
-            "Camera could not be started.\n\n" +
-            "Please allow camera permission."
+            "Camera permission is required."
         );
 
     }
@@ -983,7 +694,6 @@ async function switchCamera() {
             ? "user"
             : "environment";
 
-
     await startCamera();
 
 }
@@ -996,10 +706,7 @@ async function switchCamera() {
 async function captureAndDetect() {
 
     const video =
-        document.getElementById(
-            "camera"
-        );
-
+        document.getElementById("camera");
 
     if (
         !video ||
@@ -1007,7 +714,7 @@ async function captureAndDetect() {
     ) {
 
         alert(
-            "Please start the camera first."
+            "Start the camera first."
         );
 
         return;
@@ -1015,23 +722,18 @@ async function captureAndDetect() {
 
 
     const canvas =
-        document.createElement(
-            "canvas"
-        );
+        document.createElement("canvas");
 
 
     canvas.width =
         video.videoWidth;
-
 
     canvas.height =
         video.videoHeight;
 
 
     const context =
-        canvas.getContext(
-            "2d"
-        );
+        canvas.getContext("2d");
 
 
     context.drawImage(
@@ -1044,23 +746,29 @@ async function captureAndDetect() {
 
 
     const image =
-        document.createElement(
-            "img"
-        );
+        document.createElement("img");
 
 
     image.src =
-        canvas.toDataURL(
-            "image/jpeg"
-        );
+        canvas.toDataURL("image/jpeg");
 
 
     image.onload =
-        async function() {
+        async () => {
 
-            await predictImage(
-                image
-            );
+            const preview =
+                document.getElementById(
+                    "previewImage"
+                );
+
+            if (preview) {
+
+                preview.src =
+                    image.src;
+
+            }
+
+            await predictImage(image);
 
         };
 
@@ -1068,7 +776,7 @@ async function captureAndDetect() {
 
 
 /* =========================================================
-   SAVE DETECTION
+   SAVE DETECTION HISTORY
    ========================================================= */
 
 function saveDetection(result) {
@@ -1103,10 +811,11 @@ function saveDetection(result) {
 
 
     if (
-        detectionHistory.length > 20
+        detectionHistory.length > 50
     ) {
 
-        detectionHistory.pop();
+        detectionHistory =
+            detectionHistory.slice(0, 50);
 
     }
 
@@ -1121,7 +830,7 @@ function saveDetection(result) {
 
     updateHistoryDisplay();
 
-    updateCharts();
+    updateDashboard();
 
 }
 
@@ -1143,19 +852,11 @@ function loadHistory() {
         try {
 
             detectionHistory =
-                JSON.parse(
-                    saved
-                );
+                JSON.parse(saved);
 
-        } catch (error) {
+        } catch {
 
-            console.error(
-                "History loading error:",
-                error
-            );
-
-            detectionHistory =
-                [];
+            detectionHistory = [];
 
         }
 
@@ -1173,26 +874,25 @@ function loadHistory() {
 
 function updateHistoryDisplay() {
 
-    const historyBody =
+    const body =
         document.getElementById(
             "historyBody"
         );
 
 
-    if (!historyBody) {
+    if (!body) {
         return;
     }
 
 
-    historyBody.innerHTML =
-        "";
+    body.innerHTML = "";
 
 
     if (
         detectionHistory.length === 0
     ) {
 
-        historyBody.innerHTML = `
+        body.innerHTML = `
             <tr>
                 <td colspan="4">
                     No detections yet.
@@ -1205,25 +905,21 @@ function updateHistoryDisplay() {
 
 
     detectionHistory.forEach(
-        detection => {
+        item => {
 
             const row =
-                document.createElement(
-                    "tr"
-                );
+                document.createElement("tr");
 
 
             row.innerHTML = `
-                <td>${escapeHTML(detection.date || "")}</td>
-                <td>${escapeHTML(detection.time || "")}</td>
-                <td>${escapeHTML(detection.name || "")}</td>
-                <td>${escapeHTML(detection.confidence || "")}%</td>
+                <td>${item.date}</td>
+                <td>${item.time}</td>
+                <td>${item.name}</td>
+                <td>${item.confidence}%</td>
             `;
 
 
-            historyBody.appendChild(
-                row
-            );
+            body.appendChild(row);
 
         }
     );
@@ -1232,48 +928,46 @@ function updateHistoryDisplay() {
 
 
 /* =========================================================
-   DASHBOARD UPDATE
+   DASHBOARD COUNTERS
    ========================================================= */
 
 function updateDashboard() {
 
-    const totalDetections =
+    const total =
         document.getElementById(
             "totalDetections"
         );
 
-
-    const activeThreats =
+    const threats =
         document.getElementById(
             "activeThreats"
         );
 
-
-    const emailCount =
+    const emails =
         document.getElementById(
             "emailAlerts"
         );
 
 
-    if (totalDetections) {
+    if (total) {
 
-        totalDetections.textContent =
+        total.textContent =
             detectionHistory.length;
 
     }
 
 
-    if (activeThreats) {
+    if (threats) {
 
-        activeThreats.textContent =
+        threats.textContent =
             pestAlerts;
 
     }
 
 
-    if (emailCount) {
+    if (emails) {
 
-        emailCount.textContent =
+        emails.textContent =
             emailAlerts;
 
     }
@@ -1285,7 +979,7 @@ function updateDashboard() {
 
 
 /* =========================================================
-   CREATE PEST ALERT
+   PEST ALERT
    ========================================================= */
 
 function createPestAlert(result) {
@@ -1308,16 +1002,12 @@ function createPestAlert(result) {
 
 
     if (empty) {
-
         empty.remove();
-
     }
 
 
     const alertBox =
-        document.createElement(
-            "div"
-        );
+        document.createElement("div");
 
 
     alertBox.className =
@@ -1326,8 +1016,8 @@ function createPestAlert(result) {
 
     alertBox.innerHTML = `
         <strong>⚠️ Pest Detected</strong>
-        <p>${escapeHTML(result.name)}</p>
-        <span>Confidence: ${escapeHTML(result.confidence)}%</span>
+        <p>${result.name}</p>
+        <span>Confidence: ${result.confidence}%</span>
         <small>${new Date().toLocaleString()}</small>
     `;
 
@@ -1340,18 +1030,7 @@ function createPestAlert(result) {
 
 
 /* =========================================================
-   CHART SETUP
-   ========================================================= */
-
-function setupCharts() {
-
-    updateCharts();
-
-}
-
-
-/* =========================================================
-   UPDATE CHARTS
+   CHARTS
    ========================================================= */
 
 function updateCharts() {
@@ -1359,11 +1038,6 @@ function updateCharts() {
     if (
         typeof Chart === "undefined"
     ) {
-
-        console.log(
-            "Chart.js not loaded."
-        );
-
         return;
     }
 
@@ -1376,7 +1050,7 @@ function updateCharts() {
 
 
 /* =========================================================
-   PEST BAR CHART
+   PEST CHART
    ========================================================= */
 
 function updatePestChart() {
@@ -1408,17 +1082,13 @@ function updatePestChart() {
 
 
     detectionHistory.forEach(
-        detection => {
+        item => {
 
             if (
-                counts[
-                    detection.name
-                ] !== undefined
+                counts[item.name] !== undefined
             ) {
 
-                counts[
-                    detection.name
-                ]++;
+                counts[item.name]++;
 
             }
 
@@ -1427,9 +1097,7 @@ function updatePestChart() {
 
 
     if (pestChart) {
-
         pestChart.destroy();
-
     }
 
 
@@ -1443,22 +1111,20 @@ function updatePestChart() {
                 data: {
 
                     labels:
-                        Object.keys(
-                            counts
-                        ),
+                        Object.keys(counts),
 
                     datasets: [
+
                         {
 
                             label:
                                 "Detections",
 
                             data:
-                                Object.values(
-                                    counts
-                                )
+                                Object.values(counts)
 
                         }
+
                     ]
 
                 },
@@ -1467,19 +1133,7 @@ function updatePestChart() {
 
                     responsive: true,
 
-                    maintainAspectRatio:
-                        false,
-
-                    plugins: {
-
-                        legend: {
-
-                            display:
-                                true
-
-                        }
-
-                    }
+                    maintainAspectRatio: false
 
                 }
 
@@ -1506,32 +1160,14 @@ function updateTrendChart() {
     }
 
 
-    const recent =
+    const data =
         detectionHistory
             .slice()
             .reverse();
 
 
-    const labels =
-        recent.map(
-            detection =>
-                detection.time || ""
-        );
-
-
-    const values =
-        recent.map(
-            detection =>
-                Number(
-                    detection.confidence
-                ) || 0
-        );
-
-
     if (trendChart) {
-
         trendChart.destroy();
-
     }
 
 
@@ -1545,21 +1181,30 @@ function updateTrendChart() {
                 data: {
 
                     labels:
-                        labels,
+                        data.map(
+                            item =>
+                                item.time
+                        ),
 
                     datasets: [
+
                         {
 
                             label:
                                 "Confidence %",
 
                             data:
-                                values,
+                                data.map(
+                                    item =>
+                                        Number(
+                                            item.confidence
+                                        )
+                                ),
 
-                            tension:
-                                0.3
+                            tension: 0.3
 
                         }
+
                     ]
 
                 },
@@ -1568,8 +1213,7 @@ function updateTrendChart() {
 
                     responsive: true,
 
-                    maintainAspectRatio:
-                        false
+                    maintainAspectRatio: false
 
                 }
 
@@ -1580,7 +1224,8 @@ function updateTrendChart() {
 
 
 /* =========================================================
-   NAVIGATION
+   IMPORTANT:
+   ONE PAGE NAVIGATION
    ========================================================= */
 
 function setupNavigation() {
@@ -1588,12 +1233,6 @@ function setupNavigation() {
     const navLinks =
         document.querySelectorAll(
             ".nav-link"
-        );
-
-
-    const sections =
-        document.querySelectorAll(
-            ".content-section, .dashboard-section"
         );
 
 
@@ -1613,16 +1252,6 @@ function setupNavigation() {
                         );
 
 
-                    sections.forEach(
-                        section => {
-
-                            section.style.display =
-                                "none";
-
-                        }
-                    );
-
-
                     const target =
                         document.getElementById(
                             targetId
@@ -1631,29 +1260,32 @@ function setupNavigation() {
 
                     if (target) {
 
-                        target.style.display =
-                            "block";
+                        target.scrollIntoView({
+
+                            behavior:
+                                "smooth",
+
+                            block:
+                                "start"
+
+                        });
 
                     }
 
 
                     navLinks.forEach(
-                        item =>
+                        item => {
+
                             item.classList.remove(
                                 "active"
-                            )
+                            );
+
+                        }
                     );
 
 
                     link.classList.add(
                         "active"
-                    );
-
-
-                    history.replaceState(
-                        null,
-                        "",
-                        "#" + targetId
                     );
 
                 }
@@ -1662,46 +1294,11 @@ function setupNavigation() {
         }
     );
 
-
-    /* Open dashboard initially */
-
-    sections.forEach(
-        section => {
-
-            section.style.display =
-                "none";
-
-        }
-    );
-
-
-    const dashboard =
-        document.getElementById(
-            "dashboard"
-        );
-
-
-    if (dashboard) {
-
-        dashboard.style.display =
-            "block";
-
-    }
-
-
-    if (navLinks.length > 0) {
-
-        navLinks[0].classList.add(
-            "active"
-        );
-
-    }
-
 }
 
 
 /* =========================================================
-   LANGUAGE
+   LANGUAGE SELECTOR
    ========================================================= */
 
 function setupLanguage() {
@@ -1717,19 +1314,27 @@ function setupLanguage() {
     }
 
 
-    selector.value =
-        currentLanguage;
-
-
     selector.addEventListener(
         "change",
         event => {
 
-            currentLanguage =
+            const language =
                 event.target.value;
 
 
-            updateLanguage();
+            if (language === "ta") {
+
+                console.log(
+                    "Tamil selected."
+                );
+
+            } else {
+
+                console.log(
+                    "English selected."
+                );
+
+            }
 
         }
     );
@@ -1738,91 +1343,7 @@ function setupLanguage() {
 
 
 /* =========================================================
-   LANGUAGE UPDATE
-   ========================================================= */
-
-function updateLanguage() {
-
-    console.log(
-        "Language changed to:",
-        currentLanguage
-    );
-
-
-    /*
-       Your existing HTML contains
-       data-i18n attributes.
-
-       This keeps the selector working
-       without changing your current design.
-    */
-
-}
-
-
-/* =========================================================
-   SENSOR UPDATE HELPER
-   ========================================================= */
-
-function updateSensorValue(
-    elementId,
-    value
-) {
-
-    const element =
-        document.getElementById(
-            elementId
-        );
-
-
-    if (element) {
-
-        element.textContent =
-            value;
-
-    }
-
-}
-
-
-/* =========================================================
-   HTML ESCAPE
-   ========================================================= */
-
-function escapeHTML(value) {
-
-    return String(value)
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-/* =========================================================
-   STOP CAMERA WHEN LEAVING PAGE
+   STOP CAMERA
    ========================================================= */
 
 window.addEventListener(
