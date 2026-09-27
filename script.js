@@ -1,24 +1,22 @@
 // ============================================================
 // AI SMART PEST DETECTION & ALERT SYSTEM
 // TEAM 16
-// REAL TEACHABLE MACHINE MODEL
 // ============================================================
 
 const MODEL_URL = "./model/";
-const MODEL_VERSION = "20260927-3";
+const MODEL_VERSION = "20260927-4";
 
 const EMAIL_SERVICE_ID = "service_x2d7sj";
 const EMAIL_TEMPLATE_ID = "template_6efhw0d";
 const EMAIL_PUBLIC_KEY = "wOORs4b9toARevid-";
 
-// ============================================================
-// GLOBAL VARIABLES
-// ============================================================
 
 let model = null;
 let modelLoaded = false;
+
 let uploadedImage = null;
 let cameraStream = null;
+
 let currentCamera = "environment";
 
 let totalDetections = 0;
@@ -26,7 +24,11 @@ let activeThreats = 0;
 let emailAlerts = 0;
 
 let detectionHistory = [];
+
 let isDetecting = false;
+
+let pestChart = null;
+let trendChart = null;
 
 
 // ============================================================
@@ -42,20 +44,31 @@ emailjs.init({
 // PAGE LOAD
 // ============================================================
 
-document.addEventListener("DOMContentLoaded", async function () {
+document.addEventListener(
+    "DOMContentLoaded",
+    async function () {
 
-    setupImageUpload();
-    setupCamera();
-    setupLanguage();
-    setupNavigation();
+        setupImageUpload();
 
-    updateSensorDisplay();
+        setupCamera();
 
-    await loadAIModel();
+        setupEmail();
 
-    updateDashboard();
-    updateCharts();
-});
+        setupLanguage();
+
+        setupNavigation();
+
+        updateSensorDisplay();
+
+        loadSavedEmail();
+
+        await loadAIModel();
+
+        updateDashboard();
+
+        updateCharts();
+    }
+);
 
 
 // ============================================================
@@ -64,43 +77,55 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 async function loadAIModel() {
 
-    const status = document.getElementById("modelStatus");
+    const status =
+        document.getElementById(
+            "modelStatus"
+        );
 
     try {
 
         if (status) {
-            status.textContent = "Loading AI Model...";
-            status.className = "model-status";
+
+            status.textContent =
+                "Loading AI Model...";
+
+            status.className =
+                "model-status";
         }
+
 
         const modelFile =
             MODEL_URL +
             "model.json?v=" +
             MODEL_VERSION;
 
+
         const metadataFile =
             MODEL_URL +
             "metadata.json?v=" +
             MODEL_VERSION;
 
-        console.log("Loading model:");
-        console.log(modelFile);
-        console.log(metadataFile);
 
-        model = await tmImage.load(
-            modelFile,
-            metadataFile
+        console.log(
+            "Loading AI model..."
         );
+
+
+        model =
+            await tmImage.load(
+                modelFile,
+                metadataFile
+            );
+
 
         modelLoaded = true;
 
-        const classNames =
-            model.getClassLabels();
 
         console.log(
             "AI Classes:",
-            classNames
+            model.getClassLabels()
         );
+
 
         if (status) {
 
@@ -114,11 +139,13 @@ async function loadAIModel() {
     } catch (error) {
 
         console.error(
-            "AI model loading error:",
+            "AI Model Error:",
             error
         );
 
+
         modelLoaded = false;
+
 
         if (status) {
 
@@ -129,10 +156,148 @@ async function loadAIModel() {
                 "model-status model-error";
         }
 
-        alert(
-            "AI model could not be loaded.\n\n" +
-            "Please check the model folder."
+    }
+}
+
+
+// ============================================================
+// EMAIL SETUP
+// ============================================================
+
+function setupEmail() {
+
+    const input =
+        document.getElementById(
+            "alertEmail"
         );
+
+    const button =
+        document.getElementById(
+            "saveEmail"
+        );
+
+    if (!input || !button) return;
+
+
+    button.addEventListener(
+        "click",
+        saveEmail
+    );
+}
+
+
+// ============================================================
+// SAVE EMAIL
+// ============================================================
+
+function saveEmail() {
+
+    const input =
+        document.getElementById(
+            "alertEmail"
+        );
+
+    const status =
+        document.getElementById(
+            "emailStatus"
+        );
+
+
+    if (!input) return;
+
+
+    const email =
+        input.value.trim();
+
+
+    if (!email) {
+
+        alert(
+            "Please enter an email address."
+        );
+
+        return;
+    }
+
+
+    if (
+        !email.includes("@") ||
+        !email.includes(".")
+    ) {
+
+        alert(
+            "Please enter a valid email address."
+        );
+
+        return;
+    }
+
+
+    localStorage.setItem(
+        "demoAlertEmail",
+        email
+    );
+
+
+    if (status) {
+
+        status.textContent =
+            "Alert email saved: " +
+            email;
+
+        status.style.color =
+            "#166534";
+    }
+
+
+    alert(
+        "Demo alert email saved successfully."
+    );
+}
+
+
+// ============================================================
+// LOAD SAVED EMAIL
+// ============================================================
+
+function loadSavedEmail() {
+
+    const savedEmail =
+        localStorage.getItem(
+            "demoAlertEmail"
+        );
+
+
+    const input =
+        document.getElementById(
+            "alertEmail"
+        );
+
+
+    const status =
+        document.getElementById(
+            "emailStatus"
+        );
+
+
+    if (
+        savedEmail &&
+        input
+    ) {
+
+        input.value =
+            savedEmail;
+
+
+        if (status) {
+
+            status.textContent =
+                "Saved email: " +
+                savedEmail;
+
+            status.style.color =
+                "#166534";
+        }
     }
 }
 
@@ -144,9 +309,13 @@ async function loadAIModel() {
 function setupImageUpload() {
 
     const input =
-        document.getElementById("imageInput");
+        document.getElementById(
+            "imageInput"
+        );
+
 
     if (!input) return;
+
 
     input.addEventListener(
         "change",
@@ -155,21 +324,20 @@ function setupImageUpload() {
             const file =
                 event.target.files[0];
 
+
             if (!file) return;
 
-            console.log(
-                "Uploaded file:",
-                file.name
-            );
 
             const reader =
                 new FileReader();
+
 
             reader.onload =
                 function (e) {
 
                     uploadedImage =
                         new Image();
+
 
                     uploadedImage.onload =
                         async function () {
@@ -178,6 +346,7 @@ function setupImageUpload() {
                                 document.getElementById(
                                     "previewImage"
                                 );
+
 
                             if (preview) {
 
@@ -188,29 +357,16 @@ function setupImageUpload() {
                                     "block";
                             }
 
-                            console.log(
-                                "Upload image loaded successfully."
-                            );
 
-                            // AUTO DETECTION
+                            // AUTO DETECT
                             await detectPest();
                         };
 
-                    uploadedImage.onerror =
-                        function () {
-
-                            console.error(
-                                "Image could not be loaded."
-                            );
-
-                            alert(
-                                "Image could not be loaded."
-                            );
-                        };
 
                     uploadedImage.src =
                         e.target.result;
                 };
+
 
             reader.readAsDataURL(file);
         }
@@ -219,33 +375,37 @@ function setupImageUpload() {
 
 
 // ============================================================
-// CAMERA SETUP
+// CAMERA
 // ============================================================
 
 function setupCamera() {
 
-    const startButton =
+    const start =
         document.getElementById(
             "startCamera"
         );
+
 
     const switchButton =
         document.getElementById(
             "switchCamera"
         );
 
-    const captureButton =
+
+    const capture =
         document.getElementById(
             "captureImage"
         );
 
-    if (startButton) {
 
-        startButton.addEventListener(
+    if (start) {
+
+        start.addEventListener(
             "click",
             startCamera
         );
     }
+
 
     if (switchButton) {
 
@@ -255,9 +415,10 @@ function setupCamera() {
         );
     }
 
-    if (captureButton) {
 
-        captureButton.addEventListener(
+    if (capture) {
+
+        capture.addEventListener(
             "click",
             captureImage
         );
@@ -272,31 +433,40 @@ function setupCamera() {
 async function startCamera() {
 
     const video =
-        document.getElementById("camera");
+        document.getElementById(
+            "camera"
+        );
+
 
     if (!video) return;
 
+
     stopCamera();
+
 
     try {
 
         cameraStream =
-            await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: {
-                        ideal: currentCamera
-                    }
-                },
-                audio: false
-            });
+            await navigator.mediaDevices
+                .getUserMedia({
+
+                    video: {
+                        facingMode: {
+                            ideal:
+                                currentCamera
+                        }
+                    },
+
+                    audio: false
+                });
+
 
         video.srcObject =
             cameraStream;
 
-        video.style.display =
-            "block";
 
         await video.play();
+
 
     } catch (error) {
 
@@ -304,6 +474,7 @@ async function startCamera() {
             "Camera error:",
             error
         );
+
 
         alert(
             "Camera could not be opened.\n\n" +
@@ -320,9 +491,11 @@ async function startCamera() {
 async function switchCamera() {
 
     currentCamera =
-        currentCamera === "environment"
+        currentCamera ===
+        "environment"
             ? "user"
             : "environment";
+
 
     await startCamera();
 }
@@ -336,27 +509,37 @@ function stopCamera() {
 
     if (!cameraStream) return;
 
+
     cameraStream
         .getTracks()
-        .forEach(function (track) {
+        .forEach(
+            function (track) {
 
-            track.stop();
-        });
+                track.stop();
+            }
+        );
+
 
     cameraStream = null;
 }
 
 
 // ============================================================
-// CAPTURE IMAGE
+// CAPTURE + AUTO DETECT
 // ============================================================
 
 function captureImage() {
 
     const video =
-        document.getElementById("camera");
+        document.getElementById(
+            "camera"
+        );
 
-    if (!video || !cameraStream) {
+
+    if (
+        !video ||
+        !cameraStream
+    ) {
 
         alert(
             "Please start the camera first."
@@ -364,6 +547,7 @@ function captureImage() {
 
         return;
     }
+
 
     if (
         video.videoWidth === 0 ||
@@ -377,17 +561,24 @@ function captureImage() {
         return;
     }
 
+
     const canvas =
-        document.createElement("canvas");
+        document.createElement(
+            "canvas"
+        );
+
 
     canvas.width =
         video.videoWidth;
 
+
     canvas.height =
         video.videoHeight;
 
+
     const context =
         canvas.getContext("2d");
+
 
     context.drawImage(
         video,
@@ -397,14 +588,17 @@ function captureImage() {
         canvas.height
     );
 
+
     const imageData =
         canvas.toDataURL(
             "image/jpeg",
             0.9
         );
 
+
     uploadedImage =
         new Image();
+
 
     uploadedImage.onload =
         async function () {
@@ -413,6 +607,7 @@ function captureImage() {
                 document.getElementById(
                     "previewImage"
                 );
+
 
             if (preview) {
 
@@ -423,21 +618,11 @@ function captureImage() {
                     "block";
             }
 
-            console.log(
-                "Camera image captured."
-            );
 
-            // AUTO DETECTION
+            // AUTO DETECT
             await detectPest();
         };
 
-    uploadedImage.onerror =
-        function () {
-
-            alert(
-                "Captured image could not be loaded."
-            );
-        };
 
     uploadedImage.src =
         imageData;
@@ -445,19 +630,13 @@ function captureImage() {
 
 
 // ============================================================
-// DETECT PEST
+// DETECTION
 // ============================================================
 
 async function detectPest() {
 
-    if (isDetecting) {
+    if (isDetecting) return;
 
-        console.log(
-            "Detection already running..."
-        );
-
-        return;
-    }
 
     if (!uploadedImage) {
 
@@ -468,55 +647,32 @@ async function detectPest() {
         return;
     }
 
-    // If model is still loading, wait for it
-    if (!modelLoaded || !model) {
 
-        showLoading();
-
-        console.log(
-            "Waiting for AI model..."
-        );
-
-        let attempts = 0;
-
-        while (
-            (!modelLoaded || !model) &&
-            attempts < 50
-        ) {
-
-            await new Promise(
-                function (resolve) {
-
-                    setTimeout(
-                        resolve,
-                        200
-                    );
-                }
-            );
-
-            attempts++;
-        }
-    }
-
-    if (!modelLoaded || !model) {
+    if (
+        !modelLoaded ||
+        !model
+    ) {
 
         alert(
-            "AI model is not ready yet.\n\n" +
-            "Please wait a few seconds and try again."
+            "AI model is still loading. Please wait a moment."
         );
 
         return;
     }
 
+
     isDetecting = true;
 
+
     showLoading();
+
 
     try {
 
         console.log(
-            "Starting AI detection..."
+            "Running AI detection..."
         );
+
 
         const predictions =
             await model.predict(
@@ -524,12 +680,7 @@ async function detectPest() {
                 false
             );
 
-        console.log(
-            "AI Predictions:",
-            predictions
-        );
 
-        // Print every class probability
         predictions.forEach(
             function (prediction) {
 
@@ -545,9 +696,10 @@ async function detectPest() {
             }
         );
 
-        // Find highest probability
+
         let bestPrediction =
             predictions[0];
+
 
         for (
             let i = 1;
@@ -556,7 +708,8 @@ async function detectPest() {
         ) {
 
             if (
-                predictions[i].probability >
+                predictions[i]
+                    .probability >
                 bestPrediction.probability
             ) {
 
@@ -564,6 +717,7 @@ async function detectPest() {
                     predictions[i];
             }
         }
+
 
         const result = {
 
@@ -580,32 +734,38 @@ async function detectPest() {
                 bestPrediction.probability
         };
 
-        console.log(
-            "FINAL RESULT:",
-            result
-        );
 
-        // Show result
         displayResult(result);
 
-        // Save detection
+
         saveDetection(result);
 
-        // Send email only for pest
-        if (
+
+        const isHealthy =
             result.name
                 .trim()
-                .toLowerCase() !==
-            "healthy leaf"
-        ) {
+                .toLowerCase() ===
+            "healthy leaf";
+
+
+        if (!isHealthy) {
 
             await sendEmailAlert(
                 result
             );
+
+        } else {
+
+            console.log(
+                "Healthy leaf - no alert email."
+            );
         }
 
+
         updateDashboard();
+
         updateCharts();
+
 
     } catch (error) {
 
@@ -614,10 +774,12 @@ async function detectPest() {
             error
         );
 
+
         alert(
             "AI detection failed.\n\n" +
             error.message
         );
+
 
     } finally {
 
@@ -627,7 +789,7 @@ async function detectPest() {
 
 
 // ============================================================
-// LOADING DISPLAY
+// LOADING
 // ============================================================
 
 function showLoading() {
@@ -637,15 +799,18 @@ function showLoading() {
             "pestName"
         );
 
+
     const confidence =
         document.getElementById(
             "confidence"
         );
 
+
     const status =
         document.getElementById(
             "detectionStatus"
         );
+
 
     if (pestName) {
 
@@ -653,11 +818,13 @@ function showLoading() {
             "Analyzing...";
     }
 
+
     if (confidence) {
 
         confidence.textContent =
             "--";
     }
+
 
     if (status) {
 
@@ -681,15 +848,18 @@ function displayResult(result) {
             "pestName"
         );
 
+
     const confidence =
         document.getElementById(
             "confidence"
         );
 
+
     const status =
         document.getElementById(
             "detectionStatus"
         );
+
 
     if (pestName) {
 
@@ -697,21 +867,25 @@ function displayResult(result) {
             result.name;
     }
 
+
     if (confidence) {
 
         confidence.textContent =
-            result.confidence + "%";
+            result.confidence +
+            "%";
     }
+
 
     if (status) {
 
-        const isHealthy =
+        const healthy =
             result.name
                 .trim()
                 .toLowerCase() ===
             "healthy leaf";
 
-        if (isHealthy) {
+
+        if (healthy) {
 
             status.textContent =
                 "Healthy Leaf";
@@ -732,6 +906,123 @@ function displayResult(result) {
 
 
 // ============================================================
+// EMAIL ALERT
+// ============================================================
+
+async function sendEmailAlert(result) {
+
+    const savedEmail =
+        localStorage.getItem(
+            "demoAlertEmail"
+        );
+
+
+    if (!savedEmail) {
+
+        console.log(
+            "No demo email saved. Email not sent."
+        );
+
+
+        alert(
+            "Pest detected!\n\n" +
+            "Please enter a demo alert email to receive the email notification."
+        );
+
+
+        return;
+    }
+
+
+    try {
+
+        console.log(
+            "Sending alert email to:",
+            savedEmail
+        );
+
+
+        const response =
+            await emailjs.send(
+
+                EMAIL_SERVICE_ID,
+
+                EMAIL_TEMPLATE_ID,
+
+                {
+
+                    to_email:
+                        savedEmail,
+
+                    pest_name:
+                        result.name,
+
+                    confidence:
+                        result.confidence +
+                        "%",
+
+                    status:
+                        "Pest Detected"
+                }
+            );
+
+
+        console.log(
+            "EmailJS response:",
+            response
+        );
+
+
+        emailAlerts++;
+
+
+        const status =
+            document.getElementById(
+                "emailStatus"
+            );
+
+
+        if (status) {
+
+            status.textContent =
+                "✅ Alert email sent to " +
+                savedEmail;
+
+            status.style.color =
+                "#166534";
+        }
+
+
+        updateDashboard();
+
+
+    } catch (error) {
+
+        console.error(
+            "EMAIL ERROR:",
+            error
+        );
+
+
+        const status =
+            document.getElementById(
+                "emailStatus"
+            );
+
+
+        if (status) {
+
+            status.textContent =
+                "❌ Email could not be sent. Check EmailJS template settings.";
+
+            status.style.color =
+                "#991b1b";
+        }
+    }
+}
+
+
+// ============================================================
 // SAVE DETECTION
 // ============================================================
 
@@ -740,13 +1031,15 @@ function saveDetection(result) {
     const now =
         new Date();
 
+
     const item = {
 
         pest:
             result.name,
 
         confidence:
-            result.confidence + "%",
+            result.confidence +
+            "%",
 
         date:
             now.toLocaleDateString(),
@@ -755,9 +1048,11 @@ function saveDetection(result) {
             now.toLocaleTimeString()
     };
 
+
     detectionHistory.unshift(
         item
     );
+
 
     if (
         detectionHistory.length >
@@ -767,7 +1062,9 @@ function saveDetection(result) {
         detectionHistory.pop();
     }
 
+
     totalDetections++;
+
 
     if (
         result.name
@@ -779,59 +1076,10 @@ function saveDetection(result) {
         activeThreats++;
     }
 
+
     updateHistory();
+
     updateAlerts();
-}
-
-
-// ============================================================
-// SEND EMAIL ALERT
-// ============================================================
-
-async function sendEmailAlert(result) {
-
-    try {
-
-        console.log(
-            "Sending email for:",
-            result.name
-        );
-
-        await emailjs.send(
-            EMAIL_SERVICE_ID,
-            EMAIL_TEMPLATE_ID,
-            {
-                pest_name:
-                    result.name,
-
-                confidence:
-                    result.confidence + "%",
-
-                status:
-                    "Pest Detected"
-            }
-        );
-
-        emailAlerts++;
-
-        console.log(
-            "Email alert sent successfully."
-        );
-
-        updateDashboard();
-
-    } catch (error) {
-
-        console.error(
-            "Email error:",
-            error
-        );
-
-        console.error(
-            "Email error details:",
-            error.text || error.message
-        );
-    }
 }
 
 
@@ -846,15 +1094,18 @@ function updateDashboard() {
             "totalDetections"
         );
 
+
     const threats =
         document.getElementById(
             "activeThreats"
         );
 
+
     const emails =
         document.getElementById(
             "emailAlerts"
         );
+
 
     if (total) {
 
@@ -862,11 +1113,13 @@ function updateDashboard() {
             totalDetections;
     }
 
+
     if (threats) {
 
         threats.textContent =
             activeThreats;
     }
+
 
     if (emails) {
 
@@ -887,9 +1140,12 @@ function updateHistory() {
             "historyBody"
         );
 
+
     if (!body) return;
 
+
     body.innerHTML = "";
+
 
     detectionHistory.forEach(
         function (item) {
@@ -899,12 +1155,14 @@ function updateHistory() {
                     "tr"
                 );
 
+
             row.innerHTML = `
                 <td>${item.date}</td>
                 <td>${item.time}</td>
                 <td>${item.pest}</td>
                 <td>${item.confidence}</td>
             `;
+
 
             body.appendChild(row);
         }
@@ -923,9 +1181,11 @@ function updateAlerts() {
             "alertContainer"
         );
 
+
     if (!container) return;
 
-    const pestAlerts =
+
+    const alerts =
         detectionHistory.filter(
             function (item) {
 
@@ -938,8 +1198,9 @@ function updateAlerts() {
             }
         );
 
+
     if (
-        pestAlerts.length === 0
+        alerts.length === 0
     ) {
 
         container.innerHTML =
@@ -950,9 +1211,11 @@ function updateAlerts() {
         return;
     }
 
+
     container.innerHTML = "";
 
-    pestAlerts
+
+    alerts
         .slice(0, 5)
         .forEach(
             function (item) {
@@ -962,8 +1225,10 @@ function updateAlerts() {
                         "div"
                     );
 
+
                 div.className =
                     "alert-card";
+
 
                 div.innerHTML = `
                     <strong>
@@ -981,6 +1246,7 @@ function updateAlerts() {
                     </small>
                 `;
 
+
                 container.appendChild(
                     div
                 );
@@ -993,9 +1259,6 @@ function updateAlerts() {
 // CHARTS
 // ============================================================
 
-let pestChart = null;
-let trendChart = null;
-
 function updateCharts() {
 
     const pestCanvas =
@@ -1003,20 +1266,21 @@ function updateCharts() {
             "pestChart"
         );
 
+
     const trendCanvas =
         document.getElementById(
             "trendChart"
         );
 
+
     if (
         !pestCanvas ||
         !trendCanvas
-    ) {
+    ) return;
 
-        return;
-    }
 
     const counts = {};
+
 
     detectionHistory.forEach(
         function (item) {
@@ -1036,26 +1300,32 @@ function updateCharts() {
                         0;
                 }
 
+
                 counts[item.pest]++;
             }
         }
     );
 
+
     const labels =
         Object.keys(counts);
 
+
     const values =
         Object.values(counts);
+
 
     if (pestChart) {
 
         pestChart.destroy();
     }
 
+
     pestChart =
         new Chart(
             pestCanvas,
             {
+
                 type: "bar",
 
                 data: {
@@ -1064,7 +1334,9 @@ function updateCharts() {
                         labels,
 
                     datasets: [
+
                         {
+
                             label:
                                 "Pest Detections",
 
@@ -1084,6 +1356,7 @@ function updateCharts() {
             }
         );
 
+
     const trendLabels =
         detectionHistory
             .slice()
@@ -1094,6 +1367,7 @@ function updateCharts() {
                     return item.time;
                 }
             );
+
 
     const trendValues =
         detectionHistory
@@ -1106,15 +1380,18 @@ function updateCharts() {
                 }
             );
 
+
     if (trendChart) {
 
         trendChart.destroy();
     }
 
+
     trendChart =
         new Chart(
             trendCanvas,
             {
+
                 type: "line",
 
                 data: {
@@ -1123,7 +1400,9 @@ function updateCharts() {
                         trendLabels,
 
                     datasets: [
+
                         {
+
                             label:
                                 "Detection Trend",
 
@@ -1149,7 +1428,7 @@ function updateCharts() {
 
 
 // ============================================================
-// SENSOR
+// SENSOR DISPLAY
 // ============================================================
 
 function updateSensorDisplay() {
@@ -1159,20 +1438,24 @@ function updateSensorDisplay() {
             "temperature"
         );
 
+
     const humidity =
         document.getElementById(
             "humidity"
         );
+
 
     const distance =
         document.getElementById(
             "distance"
         );
 
+
     const irStatus =
         document.getElementById(
             "irStatus"
         );
+
 
     if (temperature) {
 
@@ -1180,17 +1463,20 @@ function updateSensorDisplay() {
             "-- °C";
     }
 
+
     if (humidity) {
 
         humidity.textContent =
             "-- %";
     }
 
+
     if (distance) {
 
         distance.textContent =
             "-- cm";
     }
+
 
     if (irStatus) {
 
@@ -1227,6 +1513,7 @@ const translations = {
             "History"
     },
 
+
     ta: {
 
         dashboard:
@@ -1257,7 +1544,9 @@ function setupLanguage() {
             "languageSelector"
         );
 
+
     if (!selector) return;
+
 
     selector.addEventListener(
         "change",
@@ -1280,6 +1569,7 @@ function changeLanguage(
             "[data-i18n]"
         );
 
+
     elements.forEach(
         function (element) {
 
@@ -1287,6 +1577,7 @@ function changeLanguage(
                 element.getAttribute(
                     "data-i18n"
                 );
+
 
             if (
                 translations[language] &&
@@ -1312,6 +1603,7 @@ function setupNavigation() {
             ".nav-link"
         );
 
+
     links.forEach(
         function (link) {
 
@@ -1324,10 +1616,12 @@ function setupNavigation() {
                             "data-target"
                         );
 
+
                     const section =
                         document.getElementById(
                             target
                         );
+
 
                     if (section) {
 
