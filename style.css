@@ -4,9 +4,11 @@
     box-sizing: border-box;
 }
 
+
 html {
     scroll-behavior: smooth;
 }
+
 
 body {
     font-family: Arial, Helvetica, sans-serif;
@@ -81,7 +83,6 @@ body {
 
 .nav-link {
     border: none;
-
     background: transparent;
 
     color: #d8e7dc;
@@ -134,7 +135,7 @@ body {
 
     margin-bottom: 5px;
 
-    color: #ffffff;
+    color: white;
 }
 
 
@@ -423,8 +424,7 @@ button {
 
 
 .primary-btn,
-.secondary-btn,
-.detect-btn {
+.secondary-btn {
     border: none;
 
     border-radius: 9px;
@@ -460,24 +460,6 @@ button {
 
 .secondary-btn:hover {
     background: #d8eadc;
-}
-
-
-.detect-btn {
-    width: 100%;
-
-    margin-top: 20px;
-
-    background: #173b23;
-
-    color: white;
-
-    font-size: 16px;
-}
-
-
-.detect-btn:hover {
-    background: #245a35;
 }
 
 
@@ -546,6 +528,10 @@ button {
     display: none;
 }
 
+
+/* =========================================================
+   RESULT
+========================================================= */
 
 .result-box {
     text-align: center;
@@ -817,6 +803,7 @@ footer strong {
             repeat(2, 1fr);
     }
 
+
     .sensor-grid {
         grid-template-columns:
             repeat(2, 1fr);
@@ -865,7 +852,7 @@ footer strong {
     }
 
 
-    /* Team members are intentionally visible on phones */
+    /* TEAM MEMBERS STAY VISIBLE */
 
     .team-box {
         display: block;
