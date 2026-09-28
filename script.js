@@ -14,6 +14,9 @@ const EMAIL_PUBLIC_KEY = "qw4mZGHePXrD9RUOk";
 const MODEL_URL = "./model/model.json";
 const METADATA_URL = "./model/metadata.json";
 
+/* ESP32 LIVE API */
+const ESP32_API_URL = "http://192.168.4.1/api/data";
+
 
 /* =========================
    GLOBAL VARIABLES
@@ -59,6 +62,15 @@ let emailJSReady = false;
 
 let currentLanguage =
   localStorage.getItem("dashboardLanguage") || "en";
+
+
+/* =========================
+   ESP32 GLOBAL VARIABLES
+========================= */
+
+let esp32Connected = false;
+let esp32Data = null;
+let esp32Timer = null;
 
 
 /* =========================
@@ -166,18 +178,18 @@ const translations = {
     hardware: "HARDWARE",
     sensorMonitoring: "Sensor Monitoring",
     sensorDescription:
-      "Hardware sensor values will appear after ESP32 connection.",
+      "Live ESP32 hardware values.",
     hardwareNotConnected: "Hardware Not Connected",
 
     temperature: "Temperature",
-    waitingDHT11: "Waiting for DHT11",
+    waitingDHT11: "Not Used",
     humidity: "Humidity",
     cropStatus: "Crop Status",
     pending: "Pending",
     aiImageBased: "AI image based",
     esp32: "ESP32",
     offline: "Offline",
-    hardwareSetupPending: "Hardware setup pending",
+    hardwareSetupPending: "Waiting for hardware",
 
     records: "RECORDS",
     detectionHistory: "Detection History",
@@ -361,18 +373,18 @@ const translations = {
     hardware: "வன்பொருள்",
     sensorMonitoring: "சென்சார் கண்காணிப்பு",
     sensorDescription:
-      "ESP32 இணைக்கப்பட்ட பிறகு வன்பொருள் சென்சார் மதிப்புகள் தோன்றும்.",
+      "ESP32-ல் இருந்து நேரடி வன்பொருள் மதிப்புகள்.",
     hardwareNotConnected: "வன்பொருள் இணைக்கப்படவில்லை",
 
     temperature: "வெப்பநிலை",
-    waitingDHT11: "DHT11 க்காக காத்திருக்கிறது",
+    waitingDHT11: "பயன்படுத்தப்படவில்லை",
     humidity: "ஈரப்பதம்",
     cropStatus: "பயிர் நிலை",
     pending: "நிலுவையில்",
     aiImageBased: "AI படத்தை அடிப்படையாகக் கொண்டது",
     esp32: "ESP32",
     offline: "ஆஃப்லைன்",
-    hardwareSetupPending: "வன்பொருள் அமைப்பு நிலுவையில் உள்ளது",
+    hardwareSetupPending: "வன்பொருளுக்காக காத்திருக்கிறது",
 
     records: "பதிவுகள்",
     detectionHistory: "கண்டறிதல் வரலாறு",
@@ -500,6 +512,7 @@ function setupLanguage() {
     renderAlerts();
     updatePestChart();
     updateTrendChart();
+    updateESP32Dashboard(esp32Data);
 
     if (savedEmail) {
 
@@ -529,11 +542,15 @@ function applyLanguage() {
 
   if (selector) {
 
-    selector.options[0].text =
-      t("languageEnglish");
+    if (selector.options.length >= 2) {
 
-    selector.options[1].text =
-      t("languageTamil");
+      selector.options[0].text =
+        t("languageEnglish");
+
+      selector.options[1].text =
+        t("languageTamil");
+
+    }
 
   }
 
@@ -615,20 +632,6 @@ function applyLanguage() {
     "#sensors .section-heading h2": "sensorMonitoring",
     "#sensors .section-heading > div > p:last-child": "sensorDescription",
 
-    ".sensor-card:nth-child(1) span": "temperature",
-    ".sensor-card:nth-child(1) small": "waitingDHT11",
-
-    ".sensor-card:nth-child(2) span": "humidity",
-    ".sensor-card:nth-child(2) small": "waitingDHT11",
-
-    ".sensor-card:nth-child(3) span": "cropStatus",
-    ".sensor-card:nth-child(3) strong": "pending",
-    ".sensor-card:nth-child(3) small": "aiImageBased",
-
-    ".sensor-card:nth-child(4) span": "esp32",
-    ".sensor-card:nth-child(4) strong": "offline",
-    ".sensor-card:nth-child(4) small": "hardwareSetupPending",
-
     "#history .section-kicker": "records",
     "#history .section-heading h2": "detectionHistory",
     "#history .section-heading > div > p:last-child": "historyDescription",
@@ -680,9 +683,11 @@ function applyLanguage() {
 
   if (modelStatus) {
 
-    if (modelStatus.textContent === "Loading..." ||
-        modelStatus.textContent === "ஏற்றப்படுகிறது..." ||
-        modelStatus.textContent === "Loading") {
+    if (
+      modelStatus.textContent === "Loading..." ||
+      modelStatus.textContent === "ஏற்றப்படுகிறது..." ||
+      modelStatus.textContent === "Loading"
+    ) {
 
       modelStatus.textContent =
         t("loading");
@@ -735,6 +740,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   initializeEmailJS();
   loadAIModel();
+
+  startESP32Monitoring();
 
 });
 
@@ -877,6 +884,11 @@ function setupEmail() {
     document.getElementById("alertEmail");
 
 
+  if (!saveButton || !testButton || !input) {
+    return;
+  }
+
+
   saveButton.addEventListener("click", () => {
 
     const email =
@@ -933,6 +945,8 @@ function loadSavedEmail() {
   const input =
     document.getElementById("alertEmail");
 
+  if (!input) return;
+
   if (savedEmail) {
 
     input.value = savedEmail;
@@ -953,6 +967,8 @@ function sendTestEmail() {
 
     const input =
       document.getElementById("alertEmail");
+
+    if (!input) return;
 
     const email =
       input.value.trim();
@@ -1245,10 +1261,14 @@ async function loadAIModel() {
     maxPredictions =
       model.getTotalClasses();
 
-    status.textContent =
-      t("ready");
+    if (status) {
 
-    status.style.color = "#5ddd9b";
+      status.textContent =
+        t("ready");
+
+      status.style.color = "#5ddd9b";
+
+    }
 
   } catch (error) {
 
@@ -1257,10 +1277,14 @@ async function loadAIModel() {
       error
     );
 
-    status.textContent =
-      t("error");
+    if (status) {
 
-    status.style.color = "#ff7f87";
+      status.textContent =
+        t("error");
+
+      status.style.color = "#ff7f87";
+
+    }
 
   }
 
@@ -1282,6 +1306,9 @@ function setupCamera() {
   const stop =
     document.getElementById("stopCamera");
 
+  if (!start || !capture || !stop) {
+    return;
+  }
 
   start.addEventListener(
     "click",
@@ -1373,6 +1400,12 @@ function stopCamera() {
     document.getElementById("stopCamera");
 
 
+  if (!video || !placeholder ||
+      !start || !capture || !stop) {
+    return;
+  }
+
+
   if (cameraStream) {
 
     cameraStream
@@ -1400,7 +1433,7 @@ async function captureCameraImage() {
   const video =
     document.getElementById("camera");
 
-  if (!video.videoWidth) {
+  if (!video || !video.videoWidth) {
 
     return;
 
@@ -1442,6 +1475,8 @@ function setupUpload() {
   const input =
     document.getElementById("imageUpload");
 
+  if (!input) return;
+
   input.addEventListener(
     "change",
     handleImageUpload
@@ -1474,12 +1509,19 @@ function handleImageUpload(event) {
     const img =
       document.getElementById("uploadedImage");
 
+    if (!img) return;
+
     img.src =
       event.target.result;
 
-    document.querySelector(
-      ".uploaded-preview"
-    ).style.display = "block";
+    const preview =
+      document.querySelector(
+        ".uploaded-preview"
+      );
+
+    if (preview) {
+      preview.style.display = "block";
+    }
 
 
     img.onload = async () => {
@@ -1773,6 +1815,11 @@ function showPredictionResult(
     );
 
 
+  if (!card || !name || !confidenceText) {
+    return;
+  }
+
+
   card.classList.remove("hidden");
 
   name.textContent =
@@ -1797,6 +1844,9 @@ function renderPredictionScores(
     document.getElementById(
       "predictionScores"
     );
+
+
+  if (!container) return;
 
 
   container.innerHTML = "";
@@ -1864,6 +1914,8 @@ function setupHistory() {
     document.getElementById(
       "clearHistory"
     );
+
+  if (!clearButton) return;
 
 
   clearButton.addEventListener(
@@ -2031,14 +2083,18 @@ function renderAlerts() {
     );
 
 
-  badge.textContent =
-    pestAlerts.length +
-    " " +
-    (
-      pestAlerts.length === 1
-        ? t("alert")
-        : t("alertsPlural")
-    );
+  if (badge) {
+
+    badge.textContent =
+      pestAlerts.length +
+      " " +
+      (
+        pestAlerts.length === 1
+          ? t("alert")
+          : t("alertsPlural")
+      );
+
+  }
 
 
   if (pestAlerts.length === 0) {
@@ -2103,17 +2159,8 @@ function renderAlerts() {
                   : `<span class="email-failed">
                       <i class="fa-solid fa-envelope"></i>
                       ${escapeHTML(
-                        currentLanguage === "ta"
-                          ? (
-                              record.emailMessage ===
-                              "Email pending"
-                                ? t("emailPendingShort")
-                                : record.emailMessage
-                            )
-                          : (
-                              record.emailMessage ||
-                              t("emailPendingShort")
-                            )
+                        record.emailMessage ||
+                        t("emailPendingShort")
                       )}
                     </span>`
               }
@@ -2135,22 +2182,36 @@ function renderAlerts() {
 
 function updateDashboardStats() {
 
-  document.getElementById(
-    "totalDetections"
-  ).textContent =
-    totalDetections;
+  const total =
+    document.getElementById(
+      "totalDetections"
+    );
+
+  const threats =
+    document.getElementById(
+      "activeThreats"
+    );
+
+  const emails =
+    document.getElementById(
+      "emailAlerts"
+    );
 
 
-  document.getElementById(
-    "activeThreats"
-  ).textContent =
-    activeThreats;
+  if (total) {
+    total.textContent =
+      totalDetections;
+  }
 
+  if (threats) {
+    threats.textContent =
+      activeThreats;
+  }
 
-  document.getElementById(
-    "emailAlerts"
-  ).textContent =
-    emailAlerts;
+  if (emails) {
+    emails.textContent =
+      emailAlerts;
+  }
 
 }
 
@@ -2167,7 +2228,9 @@ function updatePestChart() {
     );
 
 
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
 
 
   const data = [
@@ -2294,7 +2357,9 @@ function updateTrendChart() {
     );
 
 
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
 
 
   const recent =
@@ -2458,42 +2523,64 @@ function escapeHTML(value) {
 
 }
 
+
 /* =========================================================
    ESP32 HARDWARE CONNECTION
    ========================================================= */
 
-const ESP32_API_URL = "http://172.30.103.178/api/data";
+/*
+   ESP32 API:
+   http://192.168.4.1/api/data
 
-let esp32Connected = false;
-let esp32Data = null;
+   Live data:
+   - IR Sensor
+   - Ultrasonic Distance
+   - Pest Status
+   - Red LED
+   - Green LED
+   - Buzzer
+   - ESP32 IP
+*/
 
 
 /* =========================
-   ESP32 DATA FETCH
+   FETCH ESP32 DATA
 ========================= */
 
 async function fetchESP32Data() {
 
   try {
 
-    const response = await fetch(
-      ESP32_API_URL,
-      {
-        method: "GET",
-        cache: "no-store"
-      }
-    );
+    const response =
+      await fetch(
+        ESP32_API_URL,
+        {
+          method: "GET",
+          cache: "no-store"
+        }
+      );
+
 
     if (!response.ok) {
-      throw new Error("ESP32 API error");
+
+      throw new Error(
+        "ESP32 API error: " +
+        response.status
+      );
+
     }
 
-    const data = await response.json();
+
+    const data =
+      await response.json();
+
 
     esp32Connected = true;
     esp32Data = data;
 
+
     updateESP32Dashboard(data);
+
 
   } catch (error) {
 
@@ -2502,7 +2589,10 @@ async function fetchESP32Data() {
       error.message
     );
 
+
     esp32Connected = false;
+    esp32Data = null;
+
 
     updateESP32Offline();
 
@@ -2512,351 +2602,306 @@ async function fetchESP32Data() {
 
 
 /* =========================
-   UPDATE ESP32 DASHBOARD
+   CREATE LIVE SENSOR CARDS
 ========================= */
 
 function updateESP32Dashboard(data) {
 
-  const sensorCards =
-    document.querySelectorAll(
-      "#sensors .sensor-card"
-    );
-
-  if (!sensorCards.length) return;
+  if (!data) return;
 
 
-  /* -------------------------
-     ESP32 STATUS
-  ------------------------- */
-
-  const esp32Value =
-    sensorCards[3].querySelector("strong");
-
-  const esp32Small =
-    sensorCards[3].querySelector("small");
-
-  if (esp32Value) {
-
-    esp32Value.textContent =
-      "Online";
-
-  }
-
-  if (esp32Small) {
-
-    esp32Small.textContent =
-      data.ip
-        ? "IP: " + data.ip
-        : "Connected";
-
-  }
-
-
-  /* -------------------------
-     CROP / PEST STATUS
-  ------------------------- */
-
-  const cropValue =
-    sensorCards[2].querySelector("strong");
-
-  const cropSmall =
-    sensorCards[2].querySelector("small");
-
-  if (cropValue) {
-
-    cropValue.textContent =
-      data.pestDetected
-        ? "PEST DETECTED"
-        : "NO PEST";
-
-  }
-
-  if (cropSmall) {
-
-    cropSmall.textContent =
-      data.pestDetected
-        ? "ESP32 sensor alert"
-        : "Field clear";
-
-  }
-
-
-  /* -------------------------
-     HARDWARE STATUS
-  ------------------------- */
-
-  const hardwareStatus =
+  const sensorGrid =
     document.querySelector(
-      ".hardware-status"
-    );
-
-  if (hardwareStatus) {
-
-    hardwareStatus.innerHTML =
-      data.pestDetected
-
-        ? `
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          Pest Detected
-        `
-
-        : `
-          <i class="fa-solid fa-plug-circle-check"></i>
-          Hardware Connected
-        `;
-
-  }
-
-
-  /* -------------------------
-     ADD SENSOR DETAILS
-  ------------------------- */
-
-  let esp32Details =
-    document.getElementById(
-      "esp32SensorDetails"
+      "#sensors .sensor-grid"
     );
 
 
-  if (!esp32Details) {
-
-    esp32Details =
-      document.createElement("div");
-
-    esp32Details.id =
-      "esp32SensorDetails";
-
-    esp32Details.className =
-      "panel";
-
-    const sensorsSection =
-      document.getElementById(
-        "sensors"
-      );
-
-    if (sensorsSection) {
-
-      sensorsSection.appendChild(
-        esp32Details
-      );
-
-    }
-
-  }
+  if (!sensorGrid) return;
 
 
-  esp32Details.innerHTML = `
+  const distance =
+    Number(data.distance_cm);
 
-    <div class="panel-header">
+
+  const distanceText =
+    Number.isFinite(distance) &&
+    distance >= 0
+      ? distance.toFixed(1) + " cm"
+      : "No Echo";
+
+
+  const irText =
+    data.irDetected
+      ? "DETECTED"
+      : "CLEAR";
+
+
+  const ultrasonicText =
+    data.ultrasonicDetected
+      ? "DETECTED"
+      : "CLEAR";
+
+
+  const pestText =
+    data.pestDetected
+      ? "PEST DETECTED"
+      : "NO PEST";
+
+
+  const redText =
+    data.redLED
+      ? "ON"
+      : "OFF";
+
+
+  const greenText =
+    data.greenLED
+      ? "ON"
+      : "OFF";
+
+
+  const buzzerText =
+    data.buzzer
+      ? "ON"
+      : "OFF";
+
+
+  const esp32IP =
+    data.ip || "192.168.4.1";
+
+
+  sensorGrid.innerHTML = `
+
+    <!-- IR SENSOR -->
+
+    <div class="sensor-card">
+
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-eye"></i>
+      </div>
 
       <div>
 
-        <h3>
-          <i class="fa-solid fa-microchip"></i>
-          ESP32 Live Sensor Data
-        </h3>
+        <span>IR Sensor</span>
 
-        <p>
-          Real-time hardware status
-        </p>
+        <strong>
+          ${irText}
+        </strong>
+
+        <small>
+          ${
+            data.irDetected
+              ? "Object detected"
+              : "No object detected"
+          }
+        </small>
 
       </div>
 
     </div>
 
 
-    <div style="
-      display:grid;
-      grid-template-columns:
-      repeat(auto-fit,minmax(150px,1fr));
-      gap:15px;
-      margin-top:15px;
-    ">
+    <!-- ULTRASONIC -->
 
+    <div class="sensor-card">
 
-      <div class="sensor-card">
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-ruler"></i>
+      </div>
 
-        <div class="sensor-card-icon">
-          <i class="fa-solid fa-eye"></i>
-        </div>
+      <div>
 
-        <div>
+        <span>Ultrasonic</span>
 
-          <span>IR Sensor</span>
+        <strong>
+          ${distanceText}
+        </strong>
 
-          <strong>
-            ${
-              data.irDetected
-                ? "DETECTED"
-                : "CLEAR"
-            }
-          </strong>
-
-          <small>
-            ${
-              data.irDetected
-                ? "Object detected"
-                : "No object"
-            }
-          </small>
-
-        </div>
+        <small>
+          ${ultrasonicText}
+        </small>
 
       </div>
 
+    </div>
 
-      <div class="sensor-card">
 
-        <div class="sensor-card-icon">
-          <i class="fa-solid fa-ruler"></i>
-        </div>
+    <!-- PEST STATUS -->
 
-        <div>
+    <div class="sensor-card">
 
-          <span>Ultrasonic</span>
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-bug"></i>
+      </div>
 
-          <strong>
-            ${
-              data.ultrasonicDetected
-                ? "DETECTED"
-                : "CLEAR"
-            }
-          </strong>
+      <div>
 
-          <small>
-            ${
-              data.distance_cm >= 0
-                ? Number(data.distance_cm).toFixed(1) +
-                  " cm"
-                : "No Echo"
-            }
-          </small>
+        <span>Pest Status</span>
 
-        </div>
+        <strong>
+          ${pestText}
+        </strong>
+
+        <small>
+          IR + Ultrasonic
+        </small>
 
       </div>
 
+    </div>
 
-      <div class="sensor-card">
 
-        <div class="sensor-card-icon">
-          <i class="fa-solid fa-lightbulb"></i>
-        </div>
+    <!-- RED LED -->
 
-        <div>
+    <div class="sensor-card">
 
-          <span>LED Status</span>
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-lightbulb"></i>
+      </div>
 
-          <strong>
-            ${
-              data.redLED
-                ? "RED ON"
-                : "GREEN ON"
-            }
-          </strong>
+      <div>
 
-          <small>
-            Red: ${
-              data.redLED
-                ? "ON"
-                : "OFF"
-            }
-            |
-            Green: ${
-              data.greenLED
-                ? "ON"
-                : "OFF"
-            }
-          </small>
+        <span>Red LED</span>
 
-        </div>
+        <strong>
+          ${redText}
+        </strong>
+
+        <small>
+          ${
+            data.redLED
+              ? "Pest alert active"
+              : "Alert inactive"
+          }
+        </small>
 
       </div>
 
+    </div>
 
-      <div class="sensor-card">
 
-        <div class="sensor-card-icon">
-          <i class="fa-solid fa-volume-high"></i>
-        </div>
+    <!-- GREEN LED -->
 
-        <div>
+    <div class="sensor-card">
 
-          <span>Buzzer</span>
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
 
-          <strong>
-            ${
-              data.buzzer
-                ? "ON"
-                : "OFF"
-            }
-          </strong>
+      <div>
 
-          <small>
-            ${
-              data.buzzer
-                ? "Alert active"
-                : "Alert inactive"
-            }
-          </small>
+        <span>Green LED</span>
 
-        </div>
+        <strong>
+          ${greenText}
+        </strong>
+
+        <small>
+          ${
+            data.greenLED
+              ? "Normal status"
+              : "Normal LED OFF"
+          }
+        </small>
 
       </div>
 
+    </div>
 
-      <div class="sensor-card">
 
-        <div class="sensor-card-icon">
-          <i class="fa-solid fa-bug"></i>
-        </div>
+    <!-- BUZZER -->
 
-        <div>
+    <div class="sensor-card">
 
-          <span>Pest Status</span>
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-volume-high"></i>
+      </div>
 
-          <strong>
-            ${
-              data.pestDetected
-                ? "PEST DETECTED"
-                : "NO PEST"
-            }
-          </strong>
+      <div>
 
-          <small>
-            IR + Ultrasonic
-          </small>
+        <span>Buzzer</span>
 
-        </div>
+        <strong>
+          ${buzzerText}
+        </strong>
+
+        <small>
+          ${
+            data.buzzer
+              ? "Alert active"
+              : "Alert inactive"
+          }
+        </small>
 
       </div>
 
+    </div>
 
-      <div class="sensor-card">
 
-        <div class="sensor-card-icon">
-          <i class="fa-solid fa-wifi"></i>
-        </div>
+    <!-- ESP32 -->
 
-        <div>
+    <div class="sensor-card">
 
-          <span>ESP32 IP</span>
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-microchip"></i>
+      </div>
 
-          <strong style="font-size:14px;">
-            ${data.ip || "--"}
-          </strong>
+      <div>
 
-          <small>
-            Connected
-          </small>
+        <span>ESP32</span>
 
-        </div>
+        <strong>
+          ONLINE
+        </strong>
+
+        <small>
+          IP: ${escapeHTML(esp32IP)}
+        </small>
 
       </div>
 
     </div>
 
   `;
+
+
+  /* =========================
+     HARDWARE STATUS
+  ========================= */
+
+  const hardwareStatus =
+    document.querySelector(
+      ".hardware-status"
+    );
+
+
+  if (hardwareStatus) {
+
+    if (data.pestDetected) {
+
+      hardwareStatus.innerHTML = `
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        ${
+          currentLanguage === "ta"
+            ? "பூச்சி கண்டறியப்பட்டது"
+            : "Pest Detected"
+        }
+      `;
+
+    } else {
+
+      hardwareStatus.innerHTML = `
+        <i class="fa-solid fa-plug-circle-check"></i>
+        ${
+          currentLanguage === "ta"
+            ? "வன்பொருள் இணைக்கப்பட்டுள்ளது"
+            : "Hardware Connected"
+        }
+      `;
+
+    }
+
+  }
 
 }
 
@@ -2867,34 +2912,166 @@ function updateESP32Dashboard(data) {
 
 function updateESP32Offline() {
 
-  const sensorCards =
-    document.querySelectorAll(
-      "#sensors .sensor-card"
+  const sensorGrid =
+    document.querySelector(
+      "#sensors .sensor-grid"
     );
 
-  if (sensorCards.length >= 4) {
 
-    const esp32Value =
-      sensorCards[3].querySelector("strong");
+  if (!sensorGrid) return;
 
-    const esp32Small =
-      sensorCards[3].querySelector("small");
 
-    if (esp32Value) {
+  sensorGrid.innerHTML = `
 
-      esp32Value.textContent =
-        "Offline";
+    <div class="sensor-card">
 
-    }
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-eye"></i>
+      </div>
 
-    if (esp32Small) {
+      <div>
 
-      esp32Small.textContent =
-        "Waiting for ESP32";
+        <span>IR Sensor</span>
 
-    }
+        <strong>--</strong>
 
-  }
+        <small>
+          Waiting for ESP32
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <div class="sensor-card">
+
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-ruler"></i>
+      </div>
+
+      <div>
+
+        <span>Ultrasonic</span>
+
+        <strong>--</strong>
+
+        <small>
+          Waiting for ESP32
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <div class="sensor-card">
+
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-bug"></i>
+      </div>
+
+      <div>
+
+        <span>Pest Status</span>
+
+        <strong>--</strong>
+
+        <small>
+          Waiting for ESP32
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <div class="sensor-card">
+
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-lightbulb"></i>
+      </div>
+
+      <div>
+
+        <span>Red LED</span>
+
+        <strong>--</strong>
+
+        <small>
+          Waiting for ESP32
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <div class="sensor-card">
+
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+
+      <div>
+
+        <span>Green LED</span>
+
+        <strong>--</strong>
+
+        <small>
+          Waiting for ESP32
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <div class="sensor-card">
+
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-volume-high"></i>
+      </div>
+
+      <div>
+
+        <span>Buzzer</span>
+
+        <strong>--</strong>
+
+        <small>
+          Waiting for ESP32
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <div class="sensor-card">
+
+      <div class="sensor-card-icon">
+        <i class="fa-solid fa-microchip"></i>
+      </div>
+
+      <div>
+
+        <span>ESP32</span>
+
+        <strong>
+          OFFLINE
+        </strong>
+
+        <small>
+          Connect ESP32
+        </small>
+
+      </div>
+
+    </div>
+
+  `;
 
 
   const hardwareStatus =
@@ -2902,11 +3079,16 @@ function updateESP32Offline() {
       ".hardware-status"
     );
 
+
   if (hardwareStatus) {
 
     hardwareStatus.innerHTML = `
       <i class="fa-solid fa-plug"></i>
-      Hardware Not Connected
+      ${
+        currentLanguage === "ta"
+          ? "வன்பொருள் இணைக்கப்படவில்லை"
+          : "Hardware Not Connected"
+      }
     `;
 
   }
@@ -2922,23 +3104,20 @@ function startESP32Monitoring() {
 
   fetchESP32Data();
 
-  setInterval(
-    fetchESP32Data,
-    2000
-  );
 
-}
+  if (esp32Timer) {
 
-
-/* =========================
-   START AFTER PAGE LOAD
-========================= */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    startESP32Monitoring();
+    clearInterval(
+      esp32Timer
+    );
 
   }
-);
+
+
+  esp32Timer =
+    setInterval(
+      fetchESP32Data,
+      1000
+    );
+
+}
