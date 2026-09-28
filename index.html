@@ -655,12 +655,14 @@
           </h2>
 
           <p>
-            Hardware sensor values will appear after ESP32 connection.
+            Live ESP32 hardware sensor values.
           </p>
 
         </div>
 
-        <span class="hardware-status">
+        <span
+          class="hardware-status"
+          id="hardwareStatus">
 
           <i class="fa-solid fa-plug"></i>
           Hardware Not Connected
@@ -670,26 +672,32 @@
       </div>
 
 
+      <!--
+        Temperature and Humidity cards have been permanently removed.
+        DHT11 / DHT22 are NOT used in this project.
+      -->
+
       <div class="sensor-grid">
 
+        <!-- IR SENSOR -->
         <div class="sensor-card">
 
           <div class="sensor-card-icon">
-            <i class="fa-solid fa-temperature-half"></i>
+            <i class="fa-solid fa-eye"></i>
           </div>
 
           <div>
 
             <span>
-              Temperature
+              IR Sensor
             </span>
 
-            <strong>
-              -- °C
+            <strong id="irSensorValue">
+              --
             </strong>
 
-            <small>
-              Waiting for DHT11
+            <small id="irSensorStatus">
+              Waiting for ESP32
             </small>
 
           </div>
@@ -697,24 +705,25 @@
         </div>
 
 
+        <!-- ULTRASONIC -->
         <div class="sensor-card">
 
           <div class="sensor-card-icon">
-            <i class="fa-solid fa-droplet"></i>
+            <i class="fa-solid fa-ruler-horizontal"></i>
           </div>
 
           <div>
 
             <span>
-              Humidity
+              Ultrasonic Distance
             </span>
 
-            <strong>
-              -- %
+            <strong id="distanceValue">
+              -- cm
             </strong>
 
-            <small>
-              Waiting for DHT11
+            <small id="ultrasonicStatus">
+              Waiting for ESP32
             </small>
 
           </div>
@@ -722,24 +731,25 @@
         </div>
 
 
+        <!-- PEST STATUS -->
         <div class="sensor-card">
 
           <div class="sensor-card-icon">
-            <i class="fa-solid fa-seedling"></i>
+            <i class="fa-solid fa-bug"></i>
           </div>
 
           <div>
 
             <span>
-              Crop Status
+              Pest Status
             </span>
 
-            <strong>
-              Pending
+            <strong id="pestSensorValue">
+              --
             </strong>
 
-            <small>
-              AI image based
+            <small id="pestSensorStatus">
+              Waiting for ESP32
             </small>
 
           </div>
@@ -747,6 +757,7 @@
         </div>
 
 
+        <!-- ESP32 -->
         <div class="sensor-card">
 
           <div class="sensor-card-icon">
@@ -759,13 +770,146 @@
               ESP32
             </span>
 
-            <strong>
+            <strong id="esp32Status">
               Offline
             </strong>
 
-            <small>
-              Hardware setup pending
+            <small id="esp32IP">
+              Hardware connection pending
             </small>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- HARDWARE OUTPUT STATUS -->
+      <div
+        class="panel"
+        id="hardwareOutputPanel">
+
+        <div class="panel-header">
+
+          <div>
+
+            <h3>
+              <i class="fa-solid fa-bolt"></i>
+              Hardware Output Status
+            </h3>
+
+            <p>
+              Live status of ESP32 LED and buzzer outputs.
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="sensor-grid">
+
+          <!-- GREEN LED -->
+          <div class="sensor-card">
+
+            <div class="sensor-card-icon">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+
+            <div>
+
+              <span>
+                Green LED
+              </span>
+
+              <strong id="greenLEDValue">
+                --
+              </strong>
+
+              <small>
+                ESP32 output
+              </small>
+
+            </div>
+
+          </div>
+
+
+          <!-- RED LED -->
+          <div class="sensor-card">
+
+            <div class="sensor-card-icon">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </div>
+
+            <div>
+
+              <span>
+                Red LED
+              </span>
+
+              <strong id="redLEDValue">
+                --
+              </strong>
+
+              <small>
+                ESP32 output
+              </small>
+
+            </div>
+
+          </div>
+
+
+          <!-- BUZZER -->
+          <div class="sensor-card">
+
+            <div class="sensor-card-icon">
+              <i class="fa-solid fa-volume-high"></i>
+            </div>
+
+            <div>
+
+              <span>
+                Buzzer
+              </span>
+
+              <strong id="buzzerValue">
+                --
+              </strong>
+
+              <small>
+                ESP32 output
+              </small>
+
+            </div>
+
+          </div>
+
+
+          <!-- API -->
+          <div class="sensor-card">
+
+            <div class="sensor-card-icon">
+              <i class="fa-solid fa-wifi"></i>
+            </div>
+
+            <div>
+
+              <span>
+                ESP32 API
+              </span>
+
+              <strong id="apiStatus">
+                Offline
+              </strong>
+
+              <small>
+                Live connection
+              </small>
+
+            </div>
 
           </div>
 
