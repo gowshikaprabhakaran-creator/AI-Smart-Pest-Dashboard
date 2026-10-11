@@ -1,1037 +1,170 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>AI-Based Multi-Crop Pest Detection and Smart Alert System</title>
-
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-  />
-
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
-
-  <script
-    type="text/javascript"
-    src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
-  </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <link rel="stylesheet" href="style.css?v=20261011-fix3" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuard AI Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-
 <body>
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-
-    <div class="brand">
-      <div class="brand-icon">
-        <i class="fa-solid fa-leaf"></i>
-      </div>
-
-      <div>
-        <h2>AgriGuard AI</h2>
-        <span>Smart Farming</span>
-      </div>
+<header class="topbar">
+    <div>
+        <h1>🌱 AgriGuard AI</h1>
+        <p data-en="Smart Crop & Pest Monitoring"
+           data-ta="செயற்கை நுண்ணறிவு பயிர் மற்றும் பூச்சி கண்காணிப்பு">
+            Smart Crop & Pest Monitoring
+        </p>
     </div>
 
-    <nav class="nav-menu">
+    <select id="languageSelector" aria-label="Choose language">
+        <option value="en">English</option>
+        <option value="ta">தமிழ்</option>
+    </select>
+</header>
 
-      <a href="#dashboard" class="nav-link active">
-        <i class="fa-solid fa-chart-line"></i>
-        <span>Dashboard</span>
-      </a>
+<main class="container">
 
-      <a href="#detection" class="nav-link">
-        <i class="fa-solid fa-camera"></i>
-        <span>AI Detection</span>
-      </a>
+    <section class="welcome">
+        <h2 data-en="Agriculture Dashboard"
+            data-ta="விவசாயக் கண்காணிப்புப் பலகை">
+            Agriculture Dashboard
+        </h2>
+        <p data-en="Monitor crops, record detections and review results."
+           data-ta="பயிர்களைக் கண்காணித்து, கண்டறிதல்களைப் பதிவு செய்து முடிவுகளைப் பாருங்கள்.">
+            Monitor crops, record detections and review results.
+        </p>
+    </section>
 
-      <a href="#alerts" class="nav-link">
-        <i class="fa-solid fa-bell"></i>
-        <span>Alerts</span>
-      </a>
-
-      <a href="#analytics" class="nav-link">
-        <i class="fa-solid fa-chart-column"></i>
-        <span>Analytics</span>
-      </a>
-
-      <a href="#sensors" class="nav-link">
-        <i class="fa-solid fa-microchip"></i>
-        <span>Sensors</span>
-      </a>
-
-      <a href="#history" class="nav-link">
-        <i class="fa-solid fa-clock-rotate-left"></i>
-        <span>History</span>
-      </a>
-
-    </nav>
-
-    <div class="sidebar-bottom">
-      <div class="team-badge">
-        <span>PROJECT TEAM</span>
-        <strong>AI Crop Protection</strong>
-      </div>
-    </div>
-
-  </aside>
-
-
-  <!-- MAIN CONTENT -->
-  <main class="main-content">
-
-    <!-- HEADER -->
-    <header class="topbar">
-
-      <div>
-        <p class="topbar-small">AI AGRICULTURE MONITORING</p>
-        <h1>Smart Pest Detection Dashboard</h1>
-      </div>
-
-      <div class="header-right">
-
-        <select id="languageSelector" aria-label="Select language">
-          <option value="en">English</option>
-          <option value="ta">தமிழ்</option>
-        </select>
-
-        <div class="status-pill">
-          <span class="status-dot"></span>
-          System Online
-        </div>
-
-      </div>
-
-    </header>
-
-
-    <!-- DASHBOARD -->
-    <section id="dashboard" class="section">
-
-      <div class="hero-card">
-
-        <div class="hero-content">
-
-          <div class="hero-label">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-            AI POWERED AGRICULTURE
-          </div>
-
-          <h2>
-            AI Smart Pest Detection<br>
-            &amp; Alert System
-          </h2>
-
-          <p id="heroDescription">
-            Detect crop pests instantly using AI image classification
-            and receive email alerts for faster action.
-          </p>
-
-          <a href="#detection" class="hero-button">
-            Start Detection
-            <i class="fa-solid fa-arrow-right"></i>
-          </a>
-
-        </div>
-
-        <div class="hero-art">
-          <i class="fa-solid fa-seedling"></i>
-          <div class="ai-ring ring-one"></div>
-          <div class="ai-ring ring-two"></div>
-        </div>
-
-      </div>
-
-
-      <!-- PROJECT TEAM -->
-      <div class="team-line">
-        <strong>PROJECT TEAM:</strong>
-        GOWSHIKA P
-        <span>•</span>
-        PAVITHRA J
-        <span>•</span>
-        INDUMALA R
-      </div>
-
-
-      <!-- DASHBOARD STATISTICS -->
-      <div class="stats-grid">
-
-        <div class="stat-card">
-          <div class="stat-icon blue">
-            <i class="fa-solid fa-eye"></i>
-          </div>
-
-          <div>
-            <span>Total Detections</span>
+    <section class="stats">
+        <article class="stat-card">
+            <span data-en="Total Detections" data-ta="மொத்தக் கண்டறிதல்கள்">
+                Total Detections
+            </span>
             <strong id="totalDetections">0</strong>
-          </div>
-        </div>
+        </article>
 
-
-        <div class="stat-card">
-          <div class="stat-icon red">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-          </div>
-
-          <div>
-            <span>Active Threats</span>
-            <strong id="activeThreats">0</strong>
-          </div>
-        </div>
-
-
-        <div class="stat-card">
-          <div class="stat-icon orange">
-            <i class="fa-solid fa-envelope"></i>
-          </div>
-
-          <div>
-            <span>Email Alerts</span>
-            <strong id="emailAlerts">0</strong>
-          </div>
-        </div>
-
-
-        <div class="stat-card">
-          <div class="stat-icon green">
-            <i class="fa-solid fa-brain"></i>
-          </div>
-
-          <div>
-            <span>AI Model</span>
-            <strong id="modelStatus">Loading...</strong>
-          </div>
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- AI DETECTION -->
-    <section id="detection" class="section">
-
-      <div class="section-heading">
-        <div>
-          <p class="section-kicker">AI VISION</p>
-          <h2>AI Pest Detection</h2>
-          <p>
-            Use your camera or upload a crop image for AI classification.
-          </p>
-        </div>
-
-        <div class="model-badge">
-          <i class="fa-solid fa-circle-check"></i>
-          TensorFlow.js
-        </div>
-      </div>
-
-
-      <div class="detection-grid">
-
-        <!-- CAMERA DETECTION -->
-        <div class="panel">
-
-          <div class="panel-header">
-            <div>
-              <h3>
-                <i class="fa-solid fa-camera"></i>
-                Camera Detection
-              </h3>
-
-              <p>
-                Use your phone or laptop camera.
-              </p>
-            </div>
-          </div>
-
-          <div class="camera-box">
-
-            <video
-              id="camera"
-              autoplay
-              playsinline>
-            </video>
-
-            <div
-              id="cameraPlaceholder"
-              class="camera-placeholder">
-
-              <i class="fa-solid fa-camera"></i>
-              <span>Camera preview</span>
-
-            </div>
-
-          </div>
-
-          <div class="button-row">
-
-            <button
-              id="startCamera"
-              class="primary-btn"
-              type="button">
-
-              <i class="fa-solid fa-video"></i>
-              Start Camera
-
-            </button>
-
-            <button
-              id="captureImage"
-              class="secondary-btn"
-              type="button"
-              disabled>
-
-              <i class="fa-solid fa-camera"></i>
-              Capture
-
-            </button>
-
-            <button
-              id="stopCamera"
-              class="danger-btn"
-              type="button"
-              disabled>
-
-              <i class="fa-solid fa-stop"></i>
-              Stop
-
-            </button>
-
-          </div>
-
-        </div>
-
-
-        <!-- IMAGE UPLOAD -->
-        <div class="panel">
-
-          <div class="panel-header">
-            <div>
-
-              <h3>
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-                Image Upload
-              </h3>
-
-              <p>
-                Upload a clear crop or leaf image.
-              </p>
-
-            </div>
-          </div>
-
-          <label
-            class="upload-box"
-            for="imageUpload">
-
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-
-            <strong>
-              Choose an image
-            </strong>
-
-            <span>
-              JPG, JPEG or PNG
+        <article class="stat-card">
+            <span data-en="Pest Alerts" data-ta="பூச்சி எச்சரிக்கைகள்">
+                Pest Alerts
             </span>
-
-            <input
-              type="file"
-              id="imageUpload"
-              accept="image/jpeg,image/png,image/webp,image/*"
-              hidden />
-
-          </label>
-
-          <div class="uploaded-preview">
-            <img
-              id="uploadedImage"
-              alt="Uploaded crop preview" />
-          </div>
-
-          <p
-            id="uploadStatus"
-            class="upload-status"
-            data-state="idle"
-            aria-live="polite">
-
-            Choose an image to start detection.
-
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <!-- PREDICTION RESULT -->
-      <div
-        id="predictionResult"
-        class="prediction-card hidden"
-        aria-live="polite">
-
-        <div class="prediction-main">
-
-          <div class="prediction-icon">
-            <i class="fa-solid fa-microscope"></i>
-          </div>
-
-          <div>
-
-            <span>AI RESULT</span>
-
-            <h3 id="predictionName">
-              Waiting for image...
-            </h3>
-
-            <p
-              id="predictionDetails"
-              class="prediction-details">
-
-              Crop health status will appear here.
-
-            </p>
-
-          </div>
-
-        </div>
-
-        <div class="confidence-box">
-
-          <span>Confidence</span>
-
-          <strong id="predictionConfidence">
-            0%
-          </strong>
-
-        </div>
-
-      </div>
-
-
-      <!-- CLASS SCORES -->
-      <div class="panel prediction-scores-panel">
-
-        <div class="panel-header">
-
-          <div>
-
-            <h3>
-              Class Prediction Scores
-            </h3>
-
-            <p>
-              Confidence score for every trained class.
-            </p>
-
-          </div>
-
-        </div>
-
-        <div
-          id="predictionScores"
-          class="prediction-scores">
-
-          <div class="score-empty">
-            Detect an image to view class scores.
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- EMAIL ALERTS -->
-    <section id="alerts" class="section">
-
-      <div class="section-heading">
-
-        <div>
-
-          <p class="section-kicker">
-            NOTIFICATIONS
-          </p>
-
-          <h2>
-            Email Alerts
-          </h2>
-
-          <p>
-            Save an email address to receive pest detection alerts.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div class="email-panel">
-
-        <div class="email-icon">
-          <i class="fa-solid fa-envelope-open-text"></i>
-        </div>
-
-        <div class="email-content">
-
-          <h3>
-            Alert Email Configuration
-          </h3>
-
-          <p>
-            Enter the email address where pest alerts should be sent.
-          </p>
-
-          <div class="email-form">
-
-            <input
-              type="email"
-              id="alertEmail"
-              placeholder="Enter email address"
-              autocomplete="email"
-              aria-label="Alert email address" />
-
-            <button
-              id="saveEmail"
-              class="primary-btn"
-              type="button">
-
-              <i class="fa-solid fa-floppy-disk"></i>
-              Save Email
-
-            </button>
-
-            <button
-              id="testEmail"
-              class="secondary-btn"
-              type="button">
-
-              <i class="fa-solid fa-paper-plane"></i>
-              Test Email
-
-            </button>
-
-          </div>
-
-          <div
-            id="emailStatus"
-            class="email-status"
-            aria-live="polite">
-
-            No email saved yet.
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- ALERT LIST -->
-      <div class="panel alert-panel">
-
-        <div class="panel-header">
-
-          <div>
-
-            <h3>
-              Recent Alerts
-            </h3>
-
-            <p>
-              Latest pest detection notifications.
-            </p>
-
-          </div>
-
-          <span
-            class="small-badge"
-            id="alertCountBadge">
-
-            0 Alerts
-
-          </span>
-
-        </div>
-
-        <div
-          id="alertsList"
-          class="alerts-list">
-
-          <div class="empty-alerts">
-
-            <i class="fa-solid fa-bell-slash"></i>
-
-            <p>
-              No alerts yet.
-            </p>
-
-            <span>
-              Detected pests will appear here.
+            <strong id="totalAlerts">0</strong>
+        </article>
+
+        <article class="stat-card">
+            <span data-en="Crops Monitored" data-ta="கண்காணிக்கப்படும் பயிர்கள்">
+                Crops Monitored
             </span>
-
-          </div>
-
-        </div>
-
-      </div>
-
+            <strong id="totalCrops">5</strong>
+        </article>
     </section>
 
+    <section class="panel">
+        <h2 data-en="Record a Detection" data-ta="கண்டறிதலைப் பதிவு செய்யுங்கள்">
+            Record a Detection
+        </h2>
 
-    <!-- ANALYTICS -->
-    <section id="analytics" class="section">
+        <form id="detectionForm">
+            <label for="cropSelect" data-en="Select Crop" data-ta="பயிரைத் தேர்ந்தெடுக்கவும்">
+                Select Crop
+            </label>
+            <select id="cropSelect" required>
+                <option value="Paddy">Paddy / நெல்</option>
+                <option value="Chilli">Chilli / மிளகாய்</option>
+                <option value="Cotton">Cotton / பருத்தி</option>
+                <option value="Tomato">Tomato / தக்காளி</option>
+                <option value="Brinjal">Brinjal / கத்தரிக்காய்</option>
+            </select>
 
-      <div class="section-heading">
+            <label for="conditionSelect" data-en="Detection Result" data-ta="கண்டறிதல் முடிவு">
+                Detection Result
+            </label>
+            <select id="conditionSelect" required>
+                <option value="Healthy">Healthy / ஆரோக்கியமானது</option>
+                <option value="Pest">Pest Detected / பூச்சி கண்டறியப்பட்டது</option>
+            </select>
 
-        <div>
+            <label for="pestSelect" data-en="Pest Type (if detected)" data-ta="பூச்சி வகை">
+                Pest Type (if detected)
+            </label>
+            <select id="pestSelect">
+                <option value="Aphid">Aphid</option>
+                <option value="Caterpillar">Caterpillar</option>
+                <option value="Whitefly">Whitefly</option>
+                <option value="Thrips">Thrips</option>
+                <option value="Other_Pest">Other Pest</option>
+            </select>
 
-          <p class="section-kicker">
-            DATA INSIGHTS
-          </p>
+            <button type="submit" data-en="Save Detection" data-ta="கண்டறிதலைச் சேமிக்கவும்">
+                Save Detection
+            </button>
+        </form>
 
-          <h2>
-            Analytics
-          </h2>
+        <p id="statusMessage" role="status" aria-live="polite"></p>
+    </section>
 
-          <p>
-            View individual pest detection counts and detection trends.
-          </p>
-
+    <section class="panel">
+        <h2 data-en="Crop Detection Graph" data-ta="பயிர் கண்டறிதல் வரைபடம்">
+            Crop Detection Graph
+        </h2>
+        <div class="chart-box">
+            <canvas id="cropChart"></canvas>
         </div>
+    </section>
 
-      </div>
-
-
-      <div class="charts-grid">
-
-        <div class="panel">
-
-          <div class="panel-header">
-
-            <div>
-
-              <h3>
-                Pest Detection Counts
-              </h3>
-
-              <p>
-                Each pest class shown separately.
-              </p>
-
-            </div>
-
-          </div>
-
-          <div class="chart-container">
+    <section class="panel">
+        <h2 data-en="Pest Detection Graph" data-ta="பூச்சி கண்டறிதல் வரைபடம்">
+            Pest Detection Graph
+        </h2>
+        <div class="chart-box">
             <canvas id="pestChart"></canvas>
-          </div>
-
         </div>
-
-
-        <div class="panel">
-
-          <div class="panel-header">
-
-            <div>
-
-              <h3>
-                Detection Trend
-              </h3>
-
-              <p>
-                Recent AI detection activity.
-              </p>
-
-            </div>
-
-          </div>
-
-          <div class="chart-container">
-            <canvas id="trendChart"></canvas>
-          </div>
-
-        </div>
-
-      </div>
-
     </section>
 
-
-    <!-- SENSOR MONITORING -->
-    <section id="sensors" class="section">
-
-      <div class="section-heading">
-
-        <div>
-
-          <p class="section-kicker">
-            HARDWARE
-          </p>
-
-          <h2>
-            Sensor Monitoring
-          </h2>
-
-          <p>
-            Live ESP32 hardware sensor values.
-          </p>
-
+    <section class="panel">
+        <div class="history-heading">
+            <h2 data-en="Detection History" data-ta="கண்டறிதல் வரலாறு">
+                Detection History
+            </h2>
+            <button id="clearHistory" class="secondary"
+                    type="button"
+                    data-en="Clear History" data-ta="வரலாற்றை அழிக்கவும்">
+                Clear History
+            </button>
         </div>
 
-        <span
-          class="hardware-status"
-          id="hardwareStatus">
-
-          <i class="fa-solid fa-plug"></i>
-          Hardware Not Connected
-
-        </span>
-
-      </div>
-
-
-      <!-- Temperature and Humidity are not used in this project. -->
-      <div class="sensor-grid">
-
-        <!-- IR SENSOR -->
-        <div class="sensor-card">
-
-          <div class="sensor-card-icon">
-            <i class="fa-solid fa-eye"></i>
-          </div>
-
-          <div>
-
-            <span>
-              IR Sensor
-            </span>
-
-            <strong id="irSensorValue">
-              --
-            </strong>
-
-            <small id="irSensorStatus">
-              Waiting for ESP32
-            </small>
-
-          </div>
-
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th data-en="Time" data-ta="நேரம்">Time</th>
+                        <th data-en="Crop" data-ta="பயிர்">Crop</th>
+                        <th data-en="Result" data-ta="முடிவு">Result</th>
+                        <th data-en="Pest" data-ta="பூச்சி">Pest</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable">
+                    <tr>
+                        <td colspan="4">No detections yet.</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-
-
-        <!-- ULTRASONIC SENSOR -->
-        <div class="sensor-card">
-
-          <div class="sensor-card-icon">
-            <i class="fa-solid fa-ruler-horizontal"></i>
-          </div>
-
-          <div>
-
-            <span>
-              Ultrasonic Distance
-            </span>
-
-            <strong id="distanceValue">
-              -- cm
-            </strong>
-
-            <small id="ultrasonicStatus">
-              Waiting for ESP32
-            </small>
-
-          </div>
-
-        </div>
-
-
-        <!-- PEST STATUS -->
-        <div class="sensor-card">
-
-          <div class="sensor-card-icon">
-            <i class="fa-solid fa-bug"></i>
-          </div>
-
-          <div>
-
-            <span>
-              Pest Status
-            </span>
-
-            <strong id="pestSensorValue">
-              --
-            </strong>
-
-            <small id="pestSensorStatus">
-              Waiting for ESP32
-            </small>
-
-          </div>
-
-        </div>
-
-
-        <!-- ESP32 STATUS -->
-        <div class="sensor-card">
-
-          <div class="sensor-card-icon">
-            <i class="fa-solid fa-microchip"></i>
-          </div>
-
-          <div>
-
-            <span>
-              ESP32
-            </span>
-
-            <strong id="esp32Status">
-              Offline
-            </strong>
-
-            <small id="esp32IP">
-              Hardware connection pending
-            </small>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- HARDWARE OUTPUT STATUS -->
-      <div
-        class="panel"
-        id="hardwareOutputPanel">
-
-        <div class="panel-header">
-
-          <div>
-
-            <h3>
-              <i class="fa-solid fa-bolt"></i>
-              Hardware Output Status
-            </h3>
-
-            <p>
-              Live status of ESP32 LED and buzzer outputs.
-            </p>
-
-          </div>
-
-        </div>
-
-
-        <div class="sensor-grid">
-
-          <!-- YELLOW LED -->
-          <div class="sensor-card">
-
-            <div class="sensor-card-icon">
-              <i class="fa-solid fa-circle-check"></i>
-            </div>
-
-            <div>
-
-              <span>
-                Yellow LED
-              </span>
-
-              <strong id="yellowLEDValue">
-                --
-              </strong>
-
-              <small>
-                ESP32 output
-              </small>
-
-            </div>
-
-          </div>
-
-
-          <!-- RED LED -->
-          <div class="sensor-card">
-
-            <div class="sensor-card-icon">
-              <i class="fa-solid fa-circle-xmark"></i>
-            </div>
-
-            <div>
-
-              <span>
-                Red LED
-              </span>
-
-              <strong id="redLEDValue">
-                --
-              </strong>
-
-              <small>
-                ESP32 output
-              </small>
-
-            </div>
-
-          </div>
-
-
-          <!-- BUZZER -->
-          <div class="sensor-card">
-
-            <div class="sensor-card-icon">
-              <i class="fa-solid fa-volume-high"></i>
-            </div>
-
-            <div>
-
-              <span>
-                Buzzer
-              </span>
-
-              <strong id="buzzerValue">
-                --
-              </strong>
-
-              <small>
-                ESP32 output
-              </small>
-
-            </div>
-
-          </div>
-
-
-          <!-- API STATUS -->
-          <div class="sensor-card">
-
-            <div class="sensor-card-icon">
-              <i class="fa-solid fa-wifi"></i>
-            </div>
-
-            <div>
-
-              <span>
-                ESP32 API
-              </span>
-
-              <strong id="apiStatus">
-                Offline
-              </strong>
-
-              <small>
-                Live connection
-              </small>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
     </section>
 
-
-    <!-- DETECTION HISTORY -->
-    <section id="history" class="section">
-
-      <div class="section-heading">
-
-        <div>
-
-          <p class="section-kicker">
-            RECORDS
-          </p>
-
-          <h2>
-            Detection History
-          </h2>
-
-          <p>
-            All AI detections are recorded independently of email status.
-          </p>
-
-        </div>
-
-        <button
-          id="clearHistory"
-          class="secondary-btn"
-          type="button">
-
-          <i class="fa-solid fa-trash"></i>
-          Clear History
-
-        </button>
-
-      </div>
-
-
-      <div class="panel history-panel">
-
-        <div
-          id="historyList"
-          class="history-list">
-
-          <div class="empty-history">
-
-            <i class="fa-solid fa-clock-rotate-left"></i>
-
-            <p>
-              No detection history yet.
-            </p>
-
-            <span>
-              Run an AI detection to create a record.
-            </span>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- FOOTER -->
     <footer>
-
-      <div>
-
-        <strong>
-          GOWSHIKA P • PAVITHRA J • INDUMALA R
-        </strong>
-
-        <span>
-          AI Smart Pest Detection &amp; Alert System
-        </span>
-
-      </div>
-
-      <span>
-        Smart Agriculture • AI • ESP32
-      </span>
-
+        <p>AgriGuard AI · Crop Monitoring Dashboard</p>
+        <p data-en="Demo mode: entries are manually recorded."
+           data-ta="செயல்விளக்க முறை: பதிவுகள் கைமுறையாகச் சேர்க்கப்படுகின்றன.">
+            Demo mode: entries are manually recorded.
+        </p>
     </footer>
 
-  </main>
+</main>
 
-
-  <script src="script.js?v=20261011-fix3"></script>
-
+<script src="script.js"></script>
 </body>
 </html>
+```
