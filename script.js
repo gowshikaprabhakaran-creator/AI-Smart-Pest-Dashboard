@@ -1274,3 +1274,881 @@ function renderPredictionScores(result) {
     container.appendChild(wrapper);
   });
 }
+/* =========================================================
+   PART 4 — DETECTION HISTORY, DASHBOARD & PEST ALERTS
+   Continue after Part 3
+========================================================= */
+
+
+/* =========================
+   SAVE DETECTION RECORD
+========================= */
+
+function saveDetectionRecord(result) {
+  totalDetections++;
+
+  const pestDetected =
+    result.pest !== "No_Pest" &&
+    result.pest !== "Unknown";
+
+  if (pestDetected) {
+    activeThreats++;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(pestCounts, result.pest)) {
+    pestCounts[result.pest]++;
+  } else {
+    pestCounts.Other_Pest++;
+  }
+
+  const record = {
+    id: Date.now(),
+    timestamp: result.timestamp || new Date().toISOString(),
+
+    crop: result.crop,
+    cropStatus: result.cropStatus,
+    cropConfidence: result.cropConfidence,
+
+    pest: result.pest,
+    pestConfidence: result.pestConfidence,
+
+    emailStatus: "pending"
+  };
+
+  detectionHistory.unshift(record);
+
+  // Keep the most recent 100 records
+  detectionHistory = detectionHistory.slice(0, 100);
+
+  saveDashboardData();
+
+  updateDashboardCounts();
+  renderHistory();
+  renderAlerts();
+  updatePestChart();
+  updateTrendChart();
+
+  return record.id;
+}
+
+
+/* =========================
+   SAVE DASHBOARD DATA
+========================= */
+
+function saveDashboardData() {
+  localStorage.setItem(
+    "totalDetections",
+    String(totalDetections)
+  );
+
+  localStorage.setItem(
+    "activeThreats",
+    String(activeThreats)
+  );
+
+  localStorage.setItem(
+    "emailAlerts",
+    String(emailAlerts)
+  );
+
+  localStorage.setItem(
+    "detectionHistory",
+    JSON.stringify(detectionHistory)
+  );
+
+  localStorage.setItem(
+    "pestCounts",
+    JSON.stringify(pestCounts)
+  );
+}
+
+
+/* =========================
+   UPDATE DASHBOARD COUNTS
+========================= */
+
+function updateDashboardCounts() {
+  setText("totalDetections", totalDetections);
+  setText("activeThreats", activeThreats);
+  setText("emailAlerts", emailAlerts);
+
+  setText("modelStatus", cropModel && pestModel
+    ? "2 AI Models Ready"
+    : "Models Not Ready"
+  );
+
+  const badge = $("alertCountBadge");
+
+  if (badge) {
+    badge.textContent = String(
+      detectionHistory.filter(record =>
+        record.pest !== "No_Pest" &&
+        record.pest !== "Unknown"
+      ).length
+    );
+  }
+}
+
+
+/* =========================
+   FIND HISTORY RECORD
+========================= */
+
+function findHistoryRecord(recordId) {
+  return detectionHistory.find(
+    record => String(record.id) === String(recordId)
+  );
+}
+
+
+/* =========================
+   UPDATE EMAIL STATUS
+========================= */
+
+function updateRecordEmailStatus(recordId, status) {
+  const record = findHistoryRecord(recordId);
+
+  if (!record) return;
+
+  record.emailStatus = status;
+
+  saveDashboardData();
+  renderHistory();
+  renderAlerts();
+}
+
+
+/* =========================
+   SEND PEST ALERT
+========================= */
+
+async function handlePestAlert(result) {
+  const recordId = detectionHistory.length
+    ? detectionHistory[0].id
+    : null;
+
+  if (!savedEmail) {
+    updateRecordEmailStatus(recordId, "pending");
+
+    addAlertMessage(
+      "Pest detected: " + result.pest +
+      ". No alert email is configured."
+    );
+
+    return;
+  }
+
+  if (!emailJSReady) {
+    updateRecordEmailStatus(recordId, "failed");
+
+    addAlertMessage(
+      "Pest detected: " + result.pest +
+      ". Email service is unavailable."
+    );
+
+    return;
+  }
+
+  setStatus(
+    "emailStatus",
+    t("pestSendingEmail"),
+    "status-pending"
+  );
+
+  const cropName = result.crop || "Unknown";
+  const cropStatus = result.cropStatus || "Unknown";
+  const pestName = result.pest || "Unknown";
+
+  const cropConfidence =
+    (Number(result.cropConfidence || 0) * 100).toFixed(1) + "%";
+
+  const pestConfidence =
+    (Number(result.pestConfidence || 0) * 100).toFixed(1) + "%";
+
+  try {
+    const response = await sendEmail({
+      to_email: savedEmail,
+      email: savedEmail,
+
+      subject: "AI Pest Alert — " + cropName,
+
+      message:
+        "Pest detected by the AI Smart Pest Detection System.\n" +
+        "Crop: " + cropName + "\n" +
+        "Crop Status: " + cropStatus + "\n" +
+        "Crop Confidence: " + cropConfidence + "\n" +
+        "Pest: " + pestName + "\n" +
+        "Pest Confidence: " + pestConfidence + "\n" +
+        "Time: " + new Date().toLocaleString(),
+
+      crop_name: cropName,
+      crop_status: cropStatus,
+      crop_confidence: cropConfidence,
+
+      pest_name: pestName,
+      confidence: pestConfidence,
+
+      timestamp: new Date().toLocaleString()
+    });
+
+    if (!response || response.status !== 200) {
+      throw new Error("Email service returned an unexpected response.");
+    }
+
+    emailAlerts++;
+
+    saveDashboardData();
+
+    updateRecordEmailStatus(recordId, "sent");
+    updateDashboardCounts();
+
+    setStatus(
+      "emailStatus",
+      t("pestAlertSuccess") + savedEmail,
+      "status-success"
+    );
+
+    addAlertMessage(
+      "Pest alert sent: " + pestName +
+      " detected on " + cropName + "."
+    );
+
+  } catch (error) {
+    console.error("Pest alert email error:", error);
+
+    updateRecordEmailStatus(recordId, "failed");
+
+    setStatus(
+      "emailStatus",
+      t("pestEmailFailed") + error.message,
+      "status-error"
+    );
+
+    addAlertMessage(
+      "Pest detected: " + pestName +
+      ". Email failed: " + error.message
+    );
+  }
+}
+
+
+/* =========================
+   ADD ALERT MESSAGE
+========================= */
+
+function addAlertMessage(message) {
+  const alerts = JSON.parse(
+    localStorage.getItem("pestAlerts") || "[]"
+  );
+
+  alerts.unshift({
+    id: Date.now(),
+    message,
+    timestamp: new Date().toISOString()
+  });
+
+  localStorage.setItem(
+    "pestAlerts",
+    JSON.stringify(alerts.slice(0, 50))
+  );
+
+  renderAlerts();
+}
+
+
+/* =========================
+   RENDER ALERTS
+========================= */
+
+function renderAlerts() {
+  const container = $("alertsList");
+
+  if (!container) return;
+
+  const alerts = JSON.parse(
+    localStorage.getItem("pestAlerts") || "[]"
+  );
+
+  container.replaceChildren();
+
+  if (alerts.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = t("noAlerts");
+    container.appendChild(empty);
+    return;
+  }
+
+  alerts.slice(0, 10).forEach(alert => {
+    const item = document.createElement("div");
+    item.className = "alert-item";
+
+    const message = document.createElement("p");
+    message.textContent = alert.message;
+
+    const time = document.createElement("small");
+
+    const date = new Date(alert.timestamp);
+
+    time.textContent = Number.isNaN(date.getTime())
+      ? t("unknownTime")
+      : date.toLocaleString();
+
+    item.appendChild(message);
+    item.appendChild(time);
+
+    container.appendChild(item);
+  });
+}
+
+
+/* =========================
+   RENDER DETECTION HISTORY
+========================= */
+
+function renderHistory() {
+  const container = $("historyList");
+
+  if (!container) return;
+
+  container.replaceChildren();
+
+  if (detectionHistory.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = t("noHistory");
+    container.appendChild(empty);
+    return;
+  }
+
+  detectionHistory.slice(0, 50).forEach(record => {
+    const item = document.createElement("article");
+    item.className = "history-item";
+
+    const heading = document.createElement("h4");
+
+    heading.textContent =
+      record.crop + " — " + record.cropStatus;
+
+    const pest = document.createElement("p");
+
+    pest.textContent =
+      "Pest: " + String(record.pest).replace(/_/g, " ");
+
+    const confidence = document.createElement("p");
+
+    confidence.textContent =
+      "Pest confidence: " +
+      (Number(record.pestConfidence || 0) * 100).toFixed(1) +
+      "%";
+
+    const email = document.createElement("p");
+
+    email.textContent =
+      "Email: " + String(record.emailStatus || "pending");
+
+    const time = document.createElement("small");
+    const date = new Date(record.timestamp);
+
+    time.textContent = Number.isNaN(date.getTime())
+      ? t("unknownTime")
+      : date.toLocaleString();
+
+    item.appendChild(heading);
+    item.appendChild(pest);
+    item.appendChild(confidence);
+    item.appendChild(email);
+    item.appendChild(time);
+
+    container.appendChild(item);
+  });
+}
+
+
+/* =========================
+   CLEAR DETECTION HISTORY
+========================= */
+
+function setupClearHistory() {
+  const button = $("clearHistory");
+
+  if (!button) return;
+
+  button.addEventListener("click", () => {
+    if (!window.confirm(t("clearHistoryConfirm"))) {
+      return;
+    }
+
+    detectionHistory = [];
+    totalDetections = 0;
+    activeThreats = 0;
+
+    pestCounts = {
+      Aphid: 0,
+      Caterpillar: 0,
+      Thrips: 0,
+      Whitefly: 0,
+      Other_Pest: 0,
+      No_Pest: 0
+    };
+
+    localStorage.removeItem("pestAlerts");
+
+    saveDashboardData();
+
+    renderHistory();
+    renderAlerts();
+    updateDashboardCounts();
+    updatePestChart();
+    updateTrendChart();
+
+    setText("predictionDetails", "Detection history cleared.");
+  });
+}
+/* =========================================================
+   PART 5 — CHARTS, ESP32, LED STATUS & INITIALIZATION
+   Continue after Part 4
+========================================================= */
+
+
+/* =========================
+   PEST DETECTION CHART
+========================= */
+
+function updatePestChart() {
+  const canvas = $("pestChart");
+
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const labels = [
+    "Aphid",
+    "Caterpillar",
+    "Thrips",
+    "Whitefly",
+    "Other Pest",
+    "No Pest"
+  ];
+
+  const values = [
+    pestCounts.Aphid || 0,
+    pestCounts.Caterpillar || 0,
+    pestCounts.Thrips || 0,
+    pestCounts.Whitefly || 0,
+    pestCounts.Other_Pest || 0,
+    pestCounts.No_Pest || 0
+  ];
+
+  if (pestChart) {
+    pestChart.data.labels = labels;
+    pestChart.data.datasets[0].data = values;
+    pestChart.update();
+    return;
+  }
+
+  pestChart = new Chart(canvas, {
+    type: "bar",
+
+    data: {
+      labels,
+
+      datasets: [{
+        label: "Pest Detections",
+        data: values,
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0
+          }
+        }
+      },
+
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+}
+
+
+/* =========================
+   DETECTION TREND CHART
+========================= */
+
+function updateTrendChart() {
+  const canvas = $("trendChart");
+
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const recentRecords = detectionHistory
+    .slice(0, 10)
+    .reverse();
+
+  const labels = recentRecords.map(record => {
+    const date = new Date(record.timestamp);
+
+    return Number.isNaN(date.getTime())
+      ? "--"
+      : date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+  });
+
+  const values = recentRecords.map(record =>
+    record.pest !== "No_Pest" &&
+    record.pest !== "Unknown"
+      ? 1
+      : 0
+  );
+
+  if (trendChart) {
+    trendChart.data.labels = labels;
+    trendChart.data.datasets[0].data = values;
+    trendChart.update();
+    return;
+  }
+
+  trendChart = new Chart(canvas, {
+    type: "line",
+
+    data: {
+      labels,
+
+      datasets: [{
+        label: "Pest Detected",
+        data: values,
+        tension: 0.3,
+        fill: false,
+        borderWidth: 2
+      }]
+    },
+
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 1,
+          ticks: {
+            stepSize: 1,
+            callback: value => value === 1 ? "Detected" : "None"
+          }
+        }
+      }
+    }
+  });
+}
+
+
+/* =========================
+   ESP32 CONFIGURATION
+========================= */
+
+// Change this to your ESP32's actual address.
+// ESP32 and the device running this dashboard must be
+// connected to a compatible network.
+
+const ESP32_POLL_INTERVAL = 3000;
+
+
+/* =========================
+   ESP32 VALUE HELPERS
+========================= */
+
+function getFirstDefined(data, keys, fallback = null) {
+  for (const key of keys) {
+    if (
+      data &&
+      data[key] !== undefined &&
+      data[key] !== null
+    ) {
+      return data[key];
+    }
+  }
+
+  return fallback;
+}
+
+
+function displaySensorValue(value, suffix = "") {
+  if (value === null || value === undefined || value === "") {
+    return "--";
+  }
+
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    return "--";
+  }
+
+  return `${value}${suffix}`;
+}
+
+
+/* =========================
+   UPDATE ESP32 DASHBOARD
+========================= */
+
+function updateESP32Dashboard(data) {
+  if (!data) {
+    setText("esp32Status", "Offline");
+    setText("hardwareStatus", "Hardware Not Connected");
+
+    setText("irSensorValue", "--");
+    setText("distanceValue", "--");
+    setText("pestSensorValue", "--");
+
+    setText("irSensorStatus", "Waiting for data");
+    setText("ultrasonicStatus", "Waiting for data");
+    setText("pestSensorStatus", "Waiting for data");
+
+    setText("yellowLEDValue", "OFF");
+    setText("redLEDValue", "OFF");
+    setText("buzzerValue", "OFF");
+
+    return;
+  }
+
+  // IR sensor
+  const irValue = getFirstDefined(
+    data,
+    ["irSensor", "ir", "irValue", "ir_sensor"],
+    null
+  );
+
+  setText(
+    "irSensorValue",
+    displaySensorValue(irValue)
+  );
+
+  setText(
+    "irSensorStatus",
+    irValue === null
+      ? "No data"
+      : "Connected"
+  );
+
+  // Ultrasonic sensor
+  const distance = getFirstDefined(
+    data,
+    ["distance", "ultrasonicDistance", "distanceCm"],
+    null
+  );
+
+  setText(
+    "distanceValue",
+    displaySensorValue(distance, " cm")
+  );
+
+  setText(
+    "ultrasonicStatus",
+    distance === null
+      ? "No data"
+      : "Connected"
+  );
+
+  // Pest sensor
+  const pestSensor = getFirstDefined(
+    data,
+    ["pestSensor", "pest", "pestDetected", "pest_sensor"],
+    null
+  );
+
+  setText(
+    "pestSensorValue",
+    displaySensorValue(pestSensor)
+  );
+
+  setText(
+    "pestSensorStatus",
+    pestSensor === null
+      ? "No data"
+      : "Connected"
+  );
+
+  // Yellow LED: warning / detection indicator
+  const yellowLED = getFirstDefined(
+    data,
+    ["yellowLED", "yellowLed", "yellow_led"],
+    false
+  );
+
+  // Red LED: alert indicator
+  const redLED = getFirstDefined(
+    data,
+    ["redLED", "redLed", "red_led"],
+    false
+  );
+
+  const buzzer = getFirstDefined(
+    data,
+    ["buzzer", "buzzerState", "buzzer_state"],
+    false
+  );
+
+  setText(
+    "yellowLEDValue",
+    Boolean(yellowLED) ? "ON" : "OFF"
+  );
+
+  setText(
+    "redLEDValue",
+    Boolean(redLED) ? "ON" : "OFF"
+  );
+
+  setText(
+    "buzzerValue",
+    Boolean(buzzer) ? "ON" : "OFF"
+  );
+
+  setText("esp32Status", "Online");
+  setText("hardwareStatus", "Hardware Connected");
+
+  const esp32IP = $("esp32IP");
+
+  if (esp32IP) {
+    esp32IP.textContent = ESP32_API_URL;
+  }
+}
+
+
+/* =========================
+   FETCH ESP32 DATA
+========================= */
+
+async function fetchESP32Data() {
+  try {
+    const response = await fetch(ESP32_API_URL, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    esp32Connected = true;
+    esp32Data = data;
+
+    updateESP32Dashboard(data);
+
+  } catch (error) {
+    esp32Connected = false;
+    esp32Data = null;
+
+    updateESP32Dashboard(null);
+
+    console.warn("ESP32 connection unavailable:", error.message);
+  }
+}
+
+
+/* =========================
+   START ESP32 MONITORING
+========================= */
+
+function startESP32Monitoring() {
+  if (esp32Timer) {
+    clearInterval(esp32Timer);
+  }
+
+  fetchESP32Data();
+
+  esp32Timer = setInterval(
+    fetchESP32Data,
+    ESP32_POLL_INTERVAL
+  );
+}
+
+
+/* =========================
+   LOAD SAVED DASHBOARD DATA
+========================= */
+
+function loadSavedDashboardData() {
+  totalDetections =
+    Number(localStorage.getItem("totalDetections")) || 0;
+
+  emailAlerts =
+    Number(localStorage.getItem("emailAlerts")) || 0;
+
+  activeThreats = detectionHistory.filter(record =>
+    record.pest !== "No_Pest" &&
+    record.pest !== "Unknown"
+  ).length;
+
+  updateDashboardCounts();
+  renderHistory();
+  renderAlerts();
+  updatePestChart();
+  updateTrendChart();
+}
+
+
+/* =========================
+   INITIALIZE DASHBOARD
+========================= */
+
+async function initializeDashboard() {
+  console.log("Initializing AI Smart Pest Dashboard...");
+
+  setupLanguage();
+  setupNavigation();
+  setupEmailConfiguration();
+  setupCameraControls();
+  setupClearHistory();
+
+  initializeEmailJS();
+
+  loadSavedDashboardData();
+
+  // Load the crop model and pest model
+  await loadAIModels();
+
+  // Start live ESP32 polling
+  startESP32Monitoring();
+
+  console.log("Dashboard initialization complete.");
+}
+
+
+/* =========================
+   PAGE STARTUP
+========================= */
+
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    initializeDashboard,
+    { once: true }
+  );
+} else {
+  initializeDashboard();
+}
+
+
+/* =========================
+   CLEANUP
+========================= */
+
+window.addEventListener("beforeunload", () => {
+  stopCamera();
+
+  if (esp32Timer) {
+    clearInterval(esp32Timer);
+    esp32Timer = null;
+  }
+});
