@@ -928,3 +928,349 @@ function handleImageUpload(event) {
 
   reader.readAsDataURL(file);
 }
+/* =========================================================
+   PART 3 — LOAD AI MODELS & DETECT CROP / PEST
+   Continue after Part 2
+========================================================= */
+
+
+/* =========================
+   LOAD BOTH AI MODELS
+========================= */
+
+async function loadAIModels() {
+  setText("modelStatus", "Loading both AI models...");
+
+  try {
+    if (typeof tmImage === "undefined") {
+      throw new Error(
+        "Teachable Machine library not loaded. Check the script tag in index.html."
+      );
+    }
+
+    const cropBase = CROP_MODEL_URL.replace(/\/?$/, "/");
+    const pestBase = PEST_MODEL_URL.replace(/\/?$/, "/");
+
+    // Load crop type and health model
+    cropModel = await tmImage.load(
+      cropBase + "model.json",
+      cropBase + "metadata.json"
+    );
+
+    // Load pest classification model
+    pestModel = await tmImage.load(
+      pestBase + "model.json",
+      pestBase + "metadata.json"
+    );
+
+    cropModelClasses = cropModel.getTotalClasses();
+    pestModelClasses = pestModel.getTotalClasses();
+
+    setText("modelStatus", "2 AI Models Ready");
+    setText("apiStatus", "AI Ready");
+
+    console.log("Crop model classes:", cropModelClasses);
+    console.log("Pest model classes:", pestModelClasses);
+
+    return true;
+
+  } catch (error) {
+    cropModel = null;
+    pestModel = null;
+
+    setText("modelStatus", "Model Loading Failed");
+    setText("apiStatus", "AI Error");
+
+    console.error("AI model loading error:", error);
+
+    setStatus(
+      "predictionDetails",
+      "Unable to load AI models: " + error.message,
+      "status-error"
+    );
+
+    return false;
+  }
+}
+
+
+/* =========================
+   NORMALIZE CLASS NAMES
+========================= */
+
+function normalizeClassName(name) {
+  return String(name || "")
+    .trim()
+    .replace(/[\s-]+/g, "_")
+    .toLowerCase();
+}
+
+
+/* =========================
+   IDENTIFY CROP & HEALTH
+========================= */
+
+function parseCropPrediction(prediction) {
+  const rawName = prediction.className || "";
+  const normalized = normalizeClassName(rawName);
+
+  const crops = [
+    "paddy",
+    "chilli",
+    "cotton",
+    "tomato",
+    "brinjal"
+  ];
+
+  const crop = crops.find(name =>
+    normalized.includes(name)
+  );
+
+  let status = "Unknown";
+
+  if (normalized.includes("healthy")) {
+    status = "Healthy";
+  } else if (
+    normalized.includes("affected") ||
+    normalized.includes("diseased") ||
+    normalized.includes("unhealthy")
+  ) {
+    status = "Affected";
+  }
+
+  return {
+    crop: crop
+      ? crop.charAt(0).toUpperCase() + crop.slice(1)
+      : "Unknown",
+
+    status: status,
+
+    className: rawName,
+
+    confidence: Number(prediction.probability) || 0
+  };
+}
+
+
+/* =========================
+   IDENTIFY PEST
+========================= */
+
+function parsePestPrediction(prediction) {
+  const rawName = prediction.className || "";
+  const normalized = normalizeClassName(rawName);
+
+  const pestClasses = [
+    "caterpillar",
+    "aphid",
+    "thrips",
+    "whitefly",
+    "other_pest",
+    "no_pest"
+  ];
+
+  const pest = pestClasses.find(name =>
+    normalized === name ||
+    normalized.includes(name)
+  );
+
+  const pestLabels = {
+    caterpillar: "Caterpillar",
+    aphid: "Aphid",
+    thrips: "Thrips",
+    whitefly: "Whitefly",
+    other_pest: "Other_Pest",
+    no_pest: "No_Pest"
+  };
+
+  return {
+    pest: pest ? pestLabels[pest] : rawName || "Unknown",
+    className: rawName,
+    confidence: Number(prediction.probability) || 0
+  };
+}
+
+
+/* =========================
+   RUN BOTH PREDICTIONS
+========================= */
+
+async function runPrediction(image) {
+  if (!cropModel || !pestModel) {
+    setStatus(
+      "predictionDetails",
+      t("modelStillLoading"),
+      "status-error"
+    );
+    return;
+  }
+
+  setText("predictionName", "Analyzing image...");
+  setText("predictionDetails", "Running crop and pest AI models...");
+  setText("predictionConfidence", "--");
+
+  try {
+    // Model 1: Crop type and health
+    const cropPredictions = await cropModel.predict(image);
+
+    // Model 2: Pest classification
+    const pestPredictions = await pestModel.predict(image);
+
+    const bestCrop = cropPredictions.reduce((best, item) =>
+      item.probability > best.probability ? item : best
+    );
+
+    const bestPest = pestPredictions.reduce((best, item) =>
+      item.probability > best.probability ? item : best
+    );
+
+    const cropResult = parseCropPrediction(bestCrop);
+    const pestResult = parsePestPrediction(bestPest);
+
+    const result = {
+      crop: cropResult.crop,
+      cropStatus: cropResult.status,
+      cropClass: cropResult.className,
+      cropConfidence: cropResult.confidence,
+
+      pest: pestResult.pest,
+      pestClass: pestResult.className,
+      pestConfidence: pestResult.confidence,
+
+      timestamp: new Date().toISOString()
+    };
+
+    // Display result and update dashboard
+    displayPredictionResult(result);
+
+    // Save the detection to history and update analytics
+    saveDetectionRecord(result);
+
+    // Send email only when a pest is detected
+    if (result.pest !== "No_Pest" && result.pest !== "Unknown") {
+      await handlePestAlert(result);
+    }
+
+    console.log("AI prediction result:", result);
+
+  } catch (error) {
+    console.error("Prediction error:", error);
+
+    setStatus(
+      "predictionDetails",
+      t("predictionFailed") + error.message,
+      "status-error"
+    );
+  }
+}
+
+
+/* =========================
+   DISPLAY PREDICTION RESULT
+========================= */
+
+function displayPredictionResult(result) {
+  const cropStatusText =
+    result.cropStatus === "Healthy"
+      ? t("healthy")
+      : result.cropStatus === "Affected"
+        ? "Affected"
+        : "Unknown";
+
+  const pestText =
+    result.pest === "No_Pest"
+      ? "No Pest"
+      : result.pest.replace(/_/g, " ");
+
+  setText(
+    "predictionName",
+    `${result.crop} — ${cropStatusText}`
+  );
+
+  setText(
+    "predictionDetails",
+    `Pest: ${pestText}`
+  );
+
+  setText(
+    "predictionConfidence",
+    `${(result.pestConfidence * 100).toFixed(1)}%`
+  );
+
+  // Update crop health information if the element exists
+  setText("cropStatusValue", cropStatusText);
+  setText("cropNameValue", result.crop);
+  setText("pestNameValue", pestText);
+
+  // Display confidence scores from both models
+  renderPredictionScores(result);
+
+  // Show the current result in the dashboard
+  const resultPanel = $("predictionResult");
+
+  if (resultPanel) {
+    resultPanel.hidden = false;
+  }
+}
+
+
+/* =========================
+   RENDER CONFIDENCE SCORES
+========================= */
+
+function renderPredictionScores(result) {
+  const container = $("predictionScores");
+
+  if (!container) return;
+
+  container.replaceChildren();
+
+  const scores = [
+    {
+      label: "Crop: " + result.crop,
+      value: result.cropConfidence
+    },
+    {
+      label: "Crop Health: " + result.cropStatus,
+      value: result.cropConfidence
+    },
+    {
+      label: "Pest: " + result.pest.replace(/_/g, " "),
+      value: result.pestConfidence
+    }
+  ];
+
+  scores.forEach(score => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "prediction-score";
+
+    const label = document.createElement("div");
+    label.className = "prediction-score-label";
+    label.textContent = score.label;
+
+    const track = document.createElement("div");
+    track.className = "prediction-score-track";
+
+    const bar = document.createElement("div");
+    bar.className = "prediction-score-bar";
+
+    const percent = Math.max(
+      0,
+      Math.min(100, score.value * 100)
+    );
+
+    bar.style.width = `${percent}%`;
+
+    const value = document.createElement("span");
+    value.className = "prediction-score-value";
+    value.textContent = `${percent.toFixed(1)}%`;
+
+    track.appendChild(bar);
+
+    wrapper.appendChild(label);
+    wrapper.appendChild(track);
+    wrapper.appendChild(value);
+
+    container.appendChild(wrapper);
+  });
+}
