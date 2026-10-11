@@ -9,14 +9,14 @@
   --green-700: #2d7948;
   --green-600: #39965a;
   --green-500: #4caf68;
-  --green-100: #d6f1dc;
-  --green-50: #e4f5e8;
+  --green-100: #c5e7cc;
+  --green-50: #d6ebda;
 
   --text: #203328;
-  --muted: #5c7463;
-  --border: #c5e2cc;
-  --surface: #eaf7ed;
-  --page: #ccebd2;
+  --muted: #496451;
+  --border: #a7cfaf;
+  --surface: #d7eadb;
+  --page: #78b584;
 
   --blue: #4285f4;
   --blue-bg: #eaf2ff;
@@ -1682,11 +1682,11 @@ footer span {
    ========================================= */
 
 html, body {
-  background: #ccebd2;
+  background: #78b584;
 }
 
 body {
-  background-image: linear-gradient(135deg, #d8f0dd 0%, #c7e9ce 48%, #bce3c5 100%);
+  background-image: linear-gradient(135deg, #8bc596 0%, #6eaa7b 48%, #579567 100%);
   background-attachment: fixed;
 }
 
@@ -1709,40 +1709,40 @@ body {
 .email-panel,
 .empty-alerts,
 .empty-history {
-  background-color: #e7f5e9;
-  border-color: #bfdfc7;
+  background-color: #d5e9d9;
+  border-color: #a8cfb0;
 }
 
 .stat-card:nth-child(even),
 .sensor-card:nth-child(even),
 .history-item:nth-child(even) {
-  background-color: #def1e2;
+  background-color: #c9e2ce;
 }
 
 .upload-box {
-  background-image: linear-gradient(145deg, #eaf8ed, #d9f0de);
+  background-image: linear-gradient(145deg, #dcefe0, #c4e0ca);
 }
 
 .uploaded-preview {
-  background: #dff2e3;
+  background: #cde6d2;
 }
 
 .prediction-main {
-  background: #d9f0de;
+  background: #c4e0ca;
 }
 
 #languageSelector,
 input,
 select,
 textarea {
-  background-color: #f0faf2;
+  background-color: #e0efe3;
   border-color: #bddcc5;
   color: var(--text);
 }
 
 .status-pill,
 .hardware-status {
-  background-color: #d7f0dd;
+  background-color: #c3e2ca;
 }
 
 .team-line {
@@ -1751,4 +1751,17 @@ textarea {
 
 @media (max-width: 900px) {
   body { background-attachment: scroll; }
+}
+
+
+/* Darker, richer green palette for mobile and desktop */
+@media (max-width: 768px) {
+  body {
+    background-image: linear-gradient(150deg, #82bd8d 0%, #68a875 55%, #4f925f 100%);
+  }
+  .stat-card, .panel, .chart-container, .sensor-card, .history-panel,
+  .history-item, .alert-item, .team-line, .upload-box, .uploaded-preview,
+  .prediction-card, .email-panel, .empty-alerts, .empty-history {
+    background-color: #d3e8d7;
+  }
 }
