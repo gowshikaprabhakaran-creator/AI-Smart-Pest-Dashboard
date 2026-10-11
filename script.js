@@ -1,2154 +1,1159 @@
-/* =========================================================
-   AI-BASED MULTI-CROP PEST DETECTION
-   ========================================================= */
+"use strict";
 
 /* =========================
-   CONFIGURATION
+SMART CROPGUARD CONFIG
 ========================= */
+const CROP_MODEL_URL = "https://teachablemachine.withgoogle.com/models/ylA8kPisv/";
+const PEST_MODEL_URL = "https://teachablemachine.withgoogle.com/models/AzqCXwXNl/";
 
 const EMAIL_SERVICE_ID = "service_1js9nlz";
 const EMAIL_TEMPLATE_ID = "template_9gcw7py";
 const EMAIL_PUBLIC_KEY = "qw4mZGHePXrD9RUOk";
 
-// Teachable Machine models
-const CROP_MODEL_URL =
-  "https://teachablemachine.withgoogle.com/models/ylA8kPisv/";
-
-const PEST_MODEL_URL =
-  "https://teachablemachine.withgoogle.com/models/AzqCXwXNl/";
-
-// ESP32 live API
 const ESP32_API_URL = "http://192.168.4.1/api/data";
+const MIN_CONFIDENCE = 0.55;
+const MIN_CONFIDENCE_GAP = 0.08;
+const SENSOR_REFRESH_MS = 5000;
 
+const CROP_CLASSES = [
+"Paddy_Healthy", "Paddy_Affected",
+"Chilli_Healthy", "Chilli_Affected",
+"Cotton_Healthy", "Cotton_Affected",
+"Tomato_Healthy", "Tomato_Affected",
+"Brinjal_Healthy", "Brinjal_Affected"
+];
 
-/* =========================
-   GLOBAL VARIABLES
-========================= */
+const PEST_CLASSES = [
+"Caterpillar", "Aphid", "Thrips",
+"Whitefly", "Other_Pest", "No_Pest"
+];
 
-let cropModel = null;
-let pestModel = null;
-
-let cropModelClasses = 0;
-let pestModelClasses = 0;
-
-let cameraStream = null;
-let currentFacingMode = "environment";
-
-let totalDetections =
-  Number(localStorage.getItem("totalDetections")) || 0;
-
-let emailAlerts =
-  Number(localStorage.getItem("emailAlerts")) || 0;
-
-let activeThreats =
-  Number(localStorage.getItem("activeThreats")) || 0;
-
-let savedEmail =
-  localStorage.getItem("agriAlertEmail") || "";
-
-let detectionHistory =
-  JSON.parse(localStorage.getItem("detectionHistory") || "[]");
-
-let pestCounts = JSON.parse(
-  localStorage.getItem("pestCounts") ||
-  JSON.stringify({
-    Aphid: 0,
-    Caterpillar: 0,
-    Thrips: 0,
-    Whitefly: 0,
-    Other_Pest: 0,
-    No_Pest: 0
-  })
-);
-
-let pestChart = null;
-let trendChart = null;
-
-let emailJSReady = false;
-
-let currentLanguage =
-  localStorage.getItem("dashboardLanguage") || "en";
-
-let esp32Connected = false;
-let esp32Data = null;
-let esp32Timer = null;
-
-
-/* =========================
-   TRANSLATIONS
-========================= */
-
-const translations = {
-  en: {
-    brandSub: "Smart Farming",
-    dashboard: "Dashboard",
-    aiDetection: "AI Detection",
-    alerts: "Alerts",
-    analytics: "Analytics",
-    sensors: "Sensors",
-    history: "History",
-    project: "PROJECT",
-    topbarSmall: "AI AGRICULTURE MONITORING",
-    title: "Smart Pest Detection Dashboard",
-    systemOnline: "System Online",
-    heroLabel: "AI POWERED AGRICULTURE",
-    heroTitle: "AI Smart Pest Detection<br>& Alert System",
-    heroDescription:
-      "Use two AI models to identify crop type and health status, then classify visible pests and send alerts.",
-    startDetection: "Start Detection",
-    team16: "PROJECT TEAM:",
-    totalDetections: "Total Detections",
-    activeThreats: "Active Threats",
-    emailAlerts: "Email Alerts",
-    aiModel: "AI Models",
-    loading: "Loading...",
-    ready: "Ready",
-    error: "Error",
-    aiVision: "AI VISION",
-    aiPestDetection: "AI Pest Detection",
-    cameraUploadDescription:
-      "Use your camera or upload a crop image for AI classification.",
-    cameraDetection: "Camera Detection",
-    cameraDescription: "Use your phone or laptop camera.",
-    cameraPreview: "Camera preview",
-    startCamera: "Start Camera",
-    capture: "Capture",
-    stop: "Stop",
-    imageUpload: "Image Upload",
-    imageUploadDescription: "Upload a clear crop or leaf image.",
-    chooseImage: "Choose an image",
-    imageTypes: "JPG, JPEG or PNG",
-    aiResult: "AI RESULT",
-    waitingImage: "Waiting for image...",
-    confidence: "Confidence",
-    classPredictionScores: "Class Prediction Scores",
-    classPredictionDescription:
-      "Confidence scores from both crop-health and pest models.",
-    detectImageScores: "Detect an image to view class scores.",
-    notifications: "NOTIFICATIONS",
-    emailAlertsTitle: "Email Alerts",
-    emailAlertsDescription:
-      "Save an email address to receive pest detection alerts.",
-    alertEmailConfiguration: "Alert Email Configuration",
-    alertEmailDescription:
-      "Enter the email address where pest alerts should be sent.",
-    emailPlaceholder: "Enter email address",
-    saveEmail: "Save Email",
-    testEmail: "Test Email",
-    noEmailSaved: "No email saved yet.",
-    recentAlerts: "Recent Alerts",
-    recentAlertsDescription: "Latest pest detection notifications.",
-    alert: "Alert",
-    alertsPlural: "Alerts",
-    noAlerts: "No alerts yet.",
-    detectedPestsAppear: "Detected pests will appear here.",
-    dataInsights: "DATA INSIGHTS",
-    analyticsTitle: "Analytics",
-    analyticsDescription:
-      "View individual pest detection counts and detection trends.",
-    pestDetectionCounts: "Pest Detection Counts",
-    pestDetectionCountsDescription:
-      "Each pest class shown separately.",
-    detectionTrend: "Detection Trend",
-    detectionTrendDescription: "Recent AI detection activity.",
-    detections: "Detections",
-    hardware: "HARDWARE",
-    sensorMonitoring: "Sensor Monitoring",
-    sensorDescription: "Live ESP32 hardware values.",
-    hardwareNotConnected: "Hardware Not Connected",
-    temperature: "Temperature",
-    waitingDHT11: "Not Used",
-    humidity: "Humidity",
-    cropStatus: "Crop Status",
-    pending: "Pending",
-    aiImageBased: "AI image based",
-    esp32: "ESP32",
-    offline: "Offline",
-    hardwareSetupPending: "Waiting for hardware",
-    records: "RECORDS",
-    detectionHistory: "Detection History",
-    historyDescription:
-      "All AI detections are recorded independently of email status.",
-    clearHistory: "Clear History",
-    noHistory: "No detection history yet.",
-    runDetection: "Run an AI detection to create a record.",
-    healthy: "Healthy",
-    emailSent: "Email Sent",
-    emailPendingFailed: "Email Pending/Failed",
-    confidenceText: "confidence",
-    unknownTime: "Unknown time",
-    footerProject: "AI Smart Pest Detection & Alert System",
-    footerText: "Smart Agriculture • AI • ESP32",
-    cameraCouldNotStart: "Camera could not start: ",
-    modelStillLoading:
-      "AI models are still loading. Please wait and try again.",
-    predictionFailed: "Prediction failed: ",
-    emailLibraryError:
-      "EmailJS library is not loaded. Check your internet connection and reload.",
-    emailInitializationFailed: "EmailJS initialization failed: ",
-    emailSaved: "Email saved: ",
-    pleaseEnterEmail: "Please enter an email address.",
-    validEmail: "Please enter a valid email address.",
-    emailSavedSuccessfully: "Email saved successfully: ",
-    savedEmail: "Saved email: ",
-    enterSaveEmail: "Enter and save an email address first.",
-    emailNotReady: "EmailJS is not ready. Please reload the page.",
-    sendingTestEmail: "Sending test email...",
-    testEmailSuccess: "Test email sent successfully to ",
-    unexpectedEmailResponse:
-      "EmailJS returned an unexpected response.",
-    testEmailFailed: "Test email failed. Service ID: ",
-    pestSendingEmail: "Pest detected. Sending email alert...",
-    pestAlertSuccess: "Pest alert sent successfully to ",
-    pestEmailFailed: "Pest detected, but email failed. ",
-    pestEmailNotReady: "Pest detected, but EmailJS is not ready.",
-    noEmailAddress: "No email address saved.",
-    emailSentSuccessfully: "Email sent successfully",
-    emailAlertFailed: "Email alert failed.",
-    clearHistoryConfirm: "Clear all detection history?",
-    healthyNoEmail: "No email required for healthy leaf.",
-    emailPending: "Email pending",
-    emailPendingShort: "Email pending",
-    languageEnglish: "English",
-    languageTamil: "Tamil"
-  },
-
-  ta: {
-    brandSub: "சிறந்த விவசாயம்",
-    dashboard: "முகப்பு",
-    aiDetection: "AI கண்டறிதல்",
-    alerts: "எச்சரிக்கைகள்",
-    analytics: "பகுப்பாய்வு",
-    sensors: "சென்சார்கள்",
-    history: "வரலாறு",
-    project: "திட்டம்",
-    topbarSmall: "AI விவசாய கண்காணிப்பு",
-    title: "ஸ்மார்ட் பூச்சி கண்டறிதல் டாஷ்போர்டு",
-    systemOnline: "சிஸ்டம் இயங்குகிறது",
-    heroLabel: "AI தொழில்நுட்ப விவசாயம்",
-    heroTitle:
-      "AI ஸ்மார்ட் பூச்சி கண்டறிதல்<br>மற்றும் எச்சரிக்கை அமைப்பு",
-    heroDescription:
-      "இரண்டு AI மாடல்கள் மூலம் பயிர் வகை, இலை நிலை மற்றும் பூச்சிகளை கண்டறிந்து மின்னஞ்சல் எச்சரிக்கை பெறலாம்.",
-    startDetection: "கண்டறிதலை தொடங்கு",
-    team16: "திட்டக் குழு:",
-    totalDetections: "மொத்த கண்டறிதல்கள்",
-    activeThreats: "செயலில் உள்ள அச்சுறுத்தல்கள்",
-    emailAlerts: "மின்னஞ்சல் எச்சரிக்கைகள்",
-    aiModel: "AI மாடல்கள்",
-    loading: "ஏற்றப்படுகிறது...",
-    ready: "தயார்",
-    error: "பிழை",
-    aiVision: "AI பார்வை",
-    aiPestDetection: "AI பூச்சி கண்டறிதல்",
-    cameraUploadDescription:
-      "கேமராவைப் பயன்படுத்தவும் அல்லது பயிர் படத்தை பதிவேற்றவும்.",
-    cameraDetection: "கேமரா கண்டறிதல்",
-    cameraDescription:
-      "உங்கள் மொபைல் அல்லது லேப்டாப் கேமராவைப் பயன்படுத்தவும்.",
-    cameraPreview: "கேமரா முன்னோட்டம்",
-    startCamera: "கேமராவை தொடங்கு",
-    capture: "படம் எடு",
-    stop: "நிறுத்து",
-    imageUpload: "படம் பதிவேற்றம்",
-    imageUploadDescription:
-      "தெளிவான பயிர் அல்லது இலை படத்தை பதிவேற்றவும்.",
-    chooseImage: "படத்தை தேர்வு செய்க",
-    imageTypes: "JPG, JPEG அல்லது PNG",
-    aiResult: "AI முடிவு",
-    waitingImage: "படத்திற்காக காத்திருக்கிறது...",
-    confidence: "நம்பகத்தன்மை",
-    classPredictionScores: "வகை கணிப்பு மதிப்பெண்கள்",
-    classPredictionDescription:
-      "பயிர் மற்றும் பூச்சி மாடல்களின் நம்பகத்தன்மை மதிப்பெண்கள்.",
-    detectImageScores:
-      "மதிப்பெண்களை பார்க்க ஒரு படத்தை கண்டறியவும்.",
-    notifications: "அறிவிப்புகள்",
-    emailAlertsTitle: "மின்னஞ்சல் எச்சரிக்கைகள்",
-    emailAlertsDescription:
-      "பூச்சி எச்சரிக்கைகளைப் பெற மின்னஞ்சலை சேமிக்கவும்.",
-    alertEmailConfiguration: "எச்சரிக்கை மின்னஞ்சல் அமைப்பு",
-    alertEmailDescription:
-      "பூச்சி எச்சரிக்கைகள் அனுப்ப வேண்டிய மின்னஞ்சலை உள்ளிடவும்.",
-    emailPlaceholder: "மின்னஞ்சல் முகவரியை உள்ளிடவும்",
-    saveEmail: "மின்னஞ்சலை சேமி",
-    testEmail: "சோதனை மின்னஞ்சல்",
-    noEmailSaved: "மின்னஞ்சல் இன்னும் சேமிக்கப்படவில்லை.",
-    recentAlerts: "சமீபத்திய எச்சரிக்கைகள்",
-    recentAlertsDescription: "சமீபத்திய பூச்சி கண்டறிதல் அறிவிப்புகள்.",
-    alert: "எச்சரிக்கை",
-    alertsPlural: "எச்சரிக்கைகள்",
-    noAlerts: "எச்சரிக்கைகள் எதுவும் இல்லை.",
-    detectedPestsAppear: "கண்டறியப்பட்ட பூச்சிகள் இங்கே தோன்றும்.",
-    dataInsights: "தரவு பகுப்பாய்வு",
-    analyticsTitle: "பகுப்பாய்வு",
-    analyticsDescription:
-      "பூச்சி எண்ணிக்கைகள் மற்றும் கண்டறிதல் போக்குகளைப் பார்க்கவும்.",
-    pestDetectionCounts: "பூச்சி கண்டறிதல் எண்ணிக்கைகள்",
-    pestDetectionCountsDescription:
-      "ஒவ்வொரு பூச்சி வகையும் தனித்தனியாக காட்டப்படும்.",
-    detectionTrend: "கண்டறிதல் போக்கு",
-    detectionTrendDescription: "சமீபத்திய AI கண்டறிதல் செயல்பாடு.",
-    detections: "கண்டறிதல்கள்",
-    hardware: "வன்பொருள்",
-    sensorMonitoring: "சென்சார் கண்காணிப்பு",
-    sensorDescription: "ESP32-ல் இருந்து நேரடி வன்பொருள் மதிப்புகள்.",
-    hardwareNotConnected: "வன்பொருள் இணைக்கப்படவில்லை",
-    temperature: "வெப்பநிலை",
-    waitingDHT11: "பயன்படுத்தப்படவில்லை",
-    humidity: "ஈரப்பதம்",
-    cropStatus: "பயிர் நிலை",
-    pending: "நிலுவையில்",
-    aiImageBased: "AI படத்தை அடிப்படையாகக் கொண்டது",
-    esp32: "ESP32",
-    offline: "ஆஃப்லைன்",
-    hardwareSetupPending: "வன்பொருளுக்காக காத்திருக்கிறது",
-    records: "பதிவுகள்",
-    detectionHistory: "கண்டறிதல் வரலாறு",
-    historyDescription:
-      "அனைத்து AI கண்டறிதல்களும் பதிவு செய்யப்படும்.",
-    clearHistory: "வரலாற்றை அழி",
-    noHistory: "கண்டறிதல் வரலாறு இன்னும் இல்லை.",
-    runDetection: "பதிவை உருவாக்க AI கண்டறிதலை இயக்கவும்.",
-    healthy: "ஆரோக்கியமானது",
-    emailSent: "மின்னஞ்சல் அனுப்பப்பட்டது",
-    emailPendingFailed: "மின்னஞ்சல் நிலுவையில் / தோல்வி",
-    confidenceText: "நம்பகத்தன்மை",
-    unknownTime: "நேரம் தெரியவில்லை",
-    footerProject:
-      "AI ஸ்மார்ட் பூச்சி கண்டறிதல் மற்றும் எச்சரிக்கை அமைப்பு",
-    footerText: "ஸ்மார்ட் விவசாயம் • AI • ESP32",
-    cameraCouldNotStart: "கேமராவை தொடங்க முடியவில்லை: ",
-    modelStillLoading:
-      "AI மாடல்கள் இன்னும் ஏற்றப்படுகின்றன. சிறிது நேரம் கழித்து முயற்சிக்கவும்.",
-    predictionFailed: "கணிப்பு தோல்வியடைந்தது: ",
-    emailLibraryError:
-      "EmailJS library ஏற்றப்படவில்லை. இணைய இணைப்பை சரிபார்க்கவும்.",
-    emailInitializationFailed: "EmailJS தொடங்குவதில் பிழை: ",
-    emailSaved: "மின்னஞ்சல் சேமிக்கப்பட்டது: ",
-    pleaseEnterEmail: "மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
-    validEmail: "சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்.",
-    emailSavedSuccessfully: "மின்னஞ்சல் வெற்றிகரமாக சேமிக்கப்பட்டது: ",
-    savedEmail: "சேமிக்கப்பட்ட மின்னஞ்சல்: ",
-    enterSaveEmail: "முதலில் மின்னஞ்சலை உள்ளிட்டு சேமிக்கவும்.",
-    emailNotReady: "EmailJS தயாராக இல்லை. பக்கத்தை மீண்டும் ஏற்றவும்.",
-    sendingTestEmail: "சோதனை மின்னஞ்சல் அனுப்பப்படுகிறது...",
-    testEmailSuccess: "சோதனை மின்னஞ்சல் வெற்றிகரமாக அனுப்பப்பட்டது: ",
-    unexpectedEmailResponse: "EmailJS எதிர்பாராத பதிலை வழங்கியது.",
-    testEmailFailed: "சோதனை மின்னஞ்சல் தோல்வியடைந்தது. Service ID: ",
-    pestSendingEmail:
-      "பூச்சி கண்டறியப்பட்டது. மின்னஞ்சல் எச்சரிக்கை அனுப்பப்படுகிறது...",
-    pestAlertSuccess: "பூச்சி எச்சரிக்கை வெற்றிகரமாக அனுப்பப்பட்டது: ",
-    pestEmailFailed: "பூச்சி கண்டறியப்பட்டது, ஆனால் மின்னஞ்சல் தோல்வியடைந்தது. ",
-    pestEmailNotReady: "பூச்சி கண்டறியப்பட்டது, ஆனால் EmailJS தயாராக இல்லை.",
-    noEmailAddress: "மின்னஞ்சல் முகவரி சேமிக்கப்படவில்லை.",
-    emailSentSuccessfully: "மின்னஞ்சல் வெற்றிகரமாக அனுப்பப்பட்டது",
-    emailAlertFailed: "மின்னஞ்சல் எச்சரிக்கை தோல்வியடைந்தது.",
-    clearHistoryConfirm: "அனைத்து கண்டறிதல் வரலாற்றையும் அழிக்க வேண்டுமா?",
-    healthyNoEmail: "ஆரோக்கியமான இலைக்கு மின்னஞ்சல் தேவையில்லை.",
-    emailPending: "மின்னஞ்சல் நிலுவையில் உள்ளது",
-    emailPendingShort: "மின்னஞ்சல் நிலுவையில்",
-    languageEnglish: "ஆங்கிலம்",
-    languageTamil: "தமிழ்"
-  }
+const CROP_NAMES = {
+Paddy: { en: "Paddy", ta: "நெல்" },
+Chilli: { en: "Chilli", ta: "மிளகாய்" },
+Cotton: { en: "Cotton", ta: "பருத்தி" },
+Tomato: { en: "Tomato", ta: "தக்காளி" },
+Brinjal: { en: "Brinjal", ta: "கத்தரிக்காய்" }
 };
 
+const PEST_NAMES = {
+Caterpillar: { en: "Caterpillar", ta: "புழு" },
+Aphid: { en: "Aphid", ta: "அசுவினி" },
+Thrips: { en: "Thrips", ta: "திரிப்ஸ் பூச்சி" },
+Whitefly: { en: "Whitefly", ta: "வெள்ளை ஈ" },
+Other_Pest: { en: "Other Pest", ta: "மற்ற பூச்சி" },
+No_Pest: { en: "No Pest Detected", ta: "பூச்சி கண்டறியப்படவில்லை" }
+};
+
+const I18N = {
+en: {
+menu:"MAIN MENU", dashboard:"🏠 Dashboard", detection:"🔬 AI Detection",
+alerts:"🔔 Smart Alerts", analytics:"📊 Analytics", sensors:"📡 Sensors",
+history:"📋 History", grow:"Grow smarter.", protect:"Protect crops with AI-powered insights.",
+heroTag:"SMART AGRICULTURE PLATFORM", heroTitle:"Healthy Crops.<br><span>Smarter Farming.</span>",
+heroText:"Detect crop diseases and pests with AI. Monitor your field and get timely alerts.",
+start:"Start Detection →", overview:"OVERVIEW", overviewTitle:"Field at a glance",
+totalScans:"Total Scans", allScans:"All completed inspections",
+pestFindings:"Pest Findings", detectedThreats:"Detected pest threats",
+cropScans:"Crop Scans", cropInspections:"Crop health inspections",
+sensorStatus:"Sensor Status", aiLab:"AI LABORATORY", detectionTitle:"Crop & Pest Detection",
+detectionSubtitle:"Upload a photo or use your camera for analysis.",
+inputImage:"📷 Image Input", uploadTitle:"Upload a crop or pest image",
+uploadText:"Choose an image from your device.", chooseImage:"Choose Image",
+fileNote:"JPG, PNG, WEBP supported", previewPlaceholder:"Your selected image will appear here.",
+openCamera:"📹 Open Camera", capture:"📸 Capture", closeCamera:"Close Camera",
+cropDetection:"Detect Crop Health", pestDetection:"Detect Pest",
+modelNote:"Select the appropriate detector for the image you upload.",
+results:"🔍 Detection Results", waitingTitle:"Waiting for an image",
+waitingText:"Upload an image and select a detection mode.",
+confidence:"Model confidence", sendAlert:"🔔 Send Pest Alert",
+notificationCenter:"NOTIFICATION CENTER", alertTitle:"Smart Alerts",
+emailTitle:"Email Notifications", emailText:"Send a test message to verify your EmailJS configuration.",
+recipientEmail:"Recipient email address", testEmail:"Send Test Email",
+sendLatest:"Send Latest Pest Alert", insights:"INSIGHTS", analyticsTitle:"Detection Analytics",
+pestChartTitle:"Pest Detection Distribution", trendChartTitle:"Recent Detection Activity",
+iotMonitoring:"IOT MONITORING", sensorTitle:"ESP32 Smart Sensors",
+sensorSubtitle:"Connect your ESP32 to monitor field conditions.", refresh:"↻ Refresh",
+irSensor:"IR Sensor", ultrasonic:"Ultrasonic Sensor", pestSensor:"Pest Sensor",
+ledTitle:"LED Alert Indicators", ledText:"LED states are read from the ESP32 response.",
+yellowLed:"Yellow LED", redLed:"Red LED", records:"RECORDS",
+historyTitle:"Detection History", clearHistory:"Clear History",
+time:"Date / Time", mode:"Mode", finding:"Finding", status:"Status",
+noHistory:"No detections yet.",
+footerText:"AI-Based Multi-Crop Pest Detection and Smart Alert System",
+offline:"Offline", online:"Online", waiting:"Waiting for data",
+enabled:"ON", disabled:"OFF", cropMode:"Crop Health", pestMode:"Pest Detection",
+healthy:"Healthy", affected:"Affected", pestFound:"Pest detected",
+noPest:"No pest detected", uncertain:"Uncertain result",
+lowConfidence:"The model is not confident enough. Please use a clearer image and try again.",
+ambiguous:"The top predictions are too close. The result may be incorrect.",
+uploadSuccess:"Image selected successfully. Choose a detection mode.",
+uploadError:"Please choose a valid image file.", cameraError:"Camera could not be opened.",
+cameraPermission:"Allow camera access and use HTTPS or localhost.",
+captured:"Camera image captured successfully.",
+modelLoading:"Loading AI model…", modelReady:"AI model ready.",
+modelError:"Could not load the AI model. Check your internet connection.",
+noImage:"Please upload or capture an image first.",
+cropHealthyText:"The model classified this crop as healthy.",
+cropAffectedText:"The model classified this crop as affected. Please inspect the plant.",
+pestAlertText:"The model detected a possible pest. Verify the result visually.",
+noPestText:"The model did not detect a pest in this image.",
+emailMissing:"Enter a valid recipient email address.",
+emailSent:"Email sent successfully.", emailFailed:"Email could not be sent. Check your EmailJS settings.",
+emailConfig:"EmailJS could not initialize. Check the public key and internet connection.",
+noAlert:"No verified pest alert is available to send.",
+historyCleared:"Detection history cleared.", sensorError:"Cannot reach ESP32. Connect to its Wi-Fi and retry.",
+sensorLoaded:"Sensor data updated.", unknown:"Unknown",
+scanComplete:"Analysis complete.", cropModel:"CROP ANALYSIS", pestModel:"PEST ANALYSIS",
+caution:"This is an AI prediction, not a confirmed diagnosis.",
+confirm:"Please verify the result before taking action.",
+clearConfirm:"Clear all saved detection history?"
+},
+ta: {
+menu:"முக்கிய மெனு", dashboard:"🏠 முகப்பு", detection:"🔬 AI கண்டறிதல்",
+alerts:"🔔 எச்சரிக்கைகள்", analytics:"📊 பகுப்பாய்வு", sensors:"📡 சென்சார்கள்",
+history:"📋 வரலாறு", grow:"சிறந்த விவசாயம்.", protect:"AI உதவியுடன் பயிர்களைப் பாதுகாக்கவும்.",
+heroTag:"ஸ்மார்ட் விவசாயத் தளம்", heroTitle:"ஆரோக்கியமான பயிர்கள்.<br><span>சிறந்த விவசாயம்.</span>",
+heroText:"AI மூலம் பயிர் நோய்களையும் பூச்சிகளையும் கண்டறிந்து சரியான நேரத்தில் எச்சரிக்கை பெறுங்கள்.",
+start:"கண்டறிதலைத் தொடங்கு →", overview:"மேலோட்டம்", overviewTitle:"வயலின் நிலை",
+totalScans:"மொத்த ஆய்வுகள்", allScans:"முடிக்கப்பட்ட அனைத்து ஆய்வுகளும்",
+pestFindings:"பூச்சிக் கண்டறிதல்கள்", detectedThreats:"கண்டறியப்பட்ட பூச்சிகள்",
+cropScans:"பயிர் ஆய்வுகள்", cropInspections:"பயிர் ஆரோக்கிய ஆய்வுகள்",
+sensorStatus:"சென்சார் நிலை", aiLab:"AI ஆய்வகம்", detectionTitle:"பயிர் மற்றும் பூச்சி கண்டறிதல்",
+detectionSubtitle:"படத்தைப் பதிவேற்றவும் அல்லது கேமராவைப் பயன்படுத்தவும்.",
+inputImage:"📷 பட உள்ளீடு", uploadTitle:"பயிர் அல்லது பூச்சிப் படத்தைப் பதிவேற்றவும்",
+uploadText:"உங்கள் சாதனத்திலிருந்து படத்தைத் தேர்ந்தெடுக்கவும்.",
+chooseImage:"படத்தைத் தேர்ந்தெடு", fileNote:"JPG, PNG, WEBP ஆதரிக்கப்படும்",
+previewPlaceholder:"தேர்ந்தெடுத்த படம் இங்கே தோன்றும்.",
+openCamera:"📹 கேமராவைத் திற", capture:"📸 படம் எடு", closeCamera:"கேமராவை மூடு",
+cropDetection:"பயிர் ஆரோக்கியத்தைக் கண்டறி", pestDetection:"பூச்சியைக் கண்டறி",
+modelNote:"படத்திற்கு ஏற்ற கண்டறிதல் முறையைத் தேர்ந்தெடுக்கவும்.",
+results:"🔍 கண்டறிதல் முடிவுகள்", waitingTitle:"படத்திற்காகக் காத்திருக்கிறது",
+waitingText:"படத்தைப் பதிவேற்றி கண்டறிதல் முறையைத் தேர்ந்தெடுக்கவும்.",
+confidence:"AI நம்பகத்தன்மை", sendAlert:"🔔 பூச்சி எச்சரிக்கையை அனுப்பு",
+notificationCenter:"அறிவிப்பு மையம்", alertTitle:"ஸ்மார்ட் எச்சரிக்கைகள்",
+emailTitle:"மின்னஞ்சல் அறிவிப்புகள்", emailText:"EmailJS அமைப்பைச் சோதிக்க மின்னஞ்சல் அனுப்பவும்.",
+recipientEmail:"பெறுநரின் மின்னஞ்சல்", testEmail:"சோதனை மின்னஞ்சல் அனுப்பு",
+sendLatest:"சமீபத்திய பூச்சி எச்சரிக்கையை அனுப்பு", insights:"தகவல்கள்",
+analyticsTitle:"கண்டறிதல் பகுப்பாய்வு", pestChartTitle:"பூச்சிக் கண்டறிதல் பகிர்வு",
+trendChartTitle:"சமீபத்திய கண்டறிதல் செயல்பாடு", iotMonitoring:"IoT கண்காணிப்பு",
+sensorTitle:"ESP32 ஸ்மார்ட் சென்சார்கள்",
+sensorSubtitle:"வயல் நிலையை கண்காணிக்க ESP32-ஐ இணைக்கவும்.",
+refresh:"↻ புதுப்பி", irSensor:"IR சென்சார்", ultrasonic:"அல்ட்ராசோனிக் சென்சார்",
+pestSensor:"பூச்சி சென்சார்", ledTitle:"LED எச்சரிக்கை விளக்குகள்",
+ledText:"ESP32 பதிலிலிருந்து LED நிலைகள் பெறப்படுகின்றன.",
+yellowLed:"மஞ்சள் LED", redLed:"சிவப்பு LED", records:"பதிவுகள்",
+historyTitle:"கண்டறிதல் வரலாறு", clearHistory:"வரலாற்றை அழி",
+time:"தேதி / நேரம்", mode:"முறை", finding:"கண்டறிதல்", status:"நிலை",
+noHistory:"இன்னும் பதிவுகள் இல்லை.",
+footerText:"AI அடிப்படையிலான பல பயிர் பூச்சிக் கண்டறிதல் மற்றும் ஸ்மார்ட் எச்சரிக்கை அமைப்பு",
+offline:"இணைக்கப்படவில்லை", online:"இணைக்கப்பட்டுள்ளது", waiting:"தரவு காத்திருக்கிறது",
+enabled:"இயக்கம்", disabled:"நிறுத்தம்", cropMode:"பயிர் ஆரோக்கியம்",
+pestMode:"பூச்சி கண்டறிதல்", healthy:"ஆரோக்கியமானது", affected:"பாதிக்கப்பட்டது",
+pestFound:"பூச்சி கண்டறியப்பட்டது", noPest:"பூச்சி கண்டறியப்படவில்லை",
+uncertain:"உறுதியற்ற முடிவு",
+lowConfidence:"AI நம்பகத்தன்மை குறைவாக உள்ளது. தெளிவான படத்தைப் பயன்படுத்தவும்.",
+ambiguous:"முன்னணி முடிவுகளின் மதிப்புகள் நெருக்கமாக உள்ளன. முடிவு தவறாக இருக்கலாம்.",
+uploadSuccess:"படம் வெற்றிகரமாகத் தேர்ந்தெடுக்கப்பட்டது. கண்டறிதல் முறையைத் தேர்ந்தெடுக்கவும்.",
+uploadError:"சரியான படக் கோப்பைத் தேர்ந்தெடுக்கவும்.",
+cameraError:"கேமராவைத் திறக்க முடியவில்லை.",
+cameraPermission:"கேமரா அனுமதி வழங்கவும். HTTPS அல்லது localhost பயன்படுத்தவும்.",
+captured:"கேமரா படம் வெற்றிகரமாக எடுக்கப்பட்டது.",
+modelLoading:"AI மாடல் ஏற்றப்படுகிறது…", modelReady:"AI மாடல் தயார்.",
+modelError:"AI மாடலை ஏற்ற முடியவில்லை. இணைய இணைப்பைச் சரிபார்க்கவும்.",
+noImage:"முதலில் படத்தைப் பதிவேற்றவும் அல்லது எடுக்கவும்.",
+cropHealthyText:"இந்தப் பயிர் ஆரோக்கியமானது என AI கணித்துள்ளது.",
+cropAffectedText:"இந்தப் பயிர் பாதிக்கப்பட்டிருக்கலாம் என AI கணித்துள்ளது. செடியைச் சரிபார்க்கவும்.",
+pestAlertText:"பூச்சி இருக்கலாம் என AI கணித்துள்ளது. முடிவை நேரடியாகச் சரிபார்க்கவும்.",
+noPestText:"இந்தப் படத்தில் பூச்சி கண்டறியப்படவில்லை என AI கணித்துள்ளது.",
+emailMissing:"சரியான பெறுநர் மின்னஞ்சலை உள்ளிடவும்.",
+emailSent:"மின்னஞ்சல் வெற்றிகரமாக அனுப்பப்பட்டது.",
+emailFailed:"மின்னஞ்சல் அனுப்ப முடியவில்லை. EmailJS அமைப்பைச் சரிபார்க்கவும்.",
+emailConfig:"EmailJS தொடங்கவில்லை. Public key மற்றும் இணைய இணைப்பைச் சரிபார்க்கவும்.",
+noAlert:"அனுப்புவதற்கு உறுதிப்படுத்தப்பட்ட பூச்சி எச்சரிக்கை இல்லை.",
+historyCleared:"கண்டறிதல் வரலாறு அழிக்கப்பட்டது.",
+sensorError:"ESP32-ஐ அணுக முடியவில்லை. அதன் Wi-Fi-யுடன் இணைக்கவும்.",
+sensorLoaded:"சென்சார் தரவு புதுப்பிக்கப்பட்டது.", unknown:"தெரியவில்லை",
+scanComplete:"ஆய்வு முடிந்தது.", cropModel:"பயிர் ஆய்வு", pestModel:"பூச்சி ஆய்வு",
+caution:"இது AI கணிப்பு மட்டுமே; உறுதிப்படுத்தப்பட்ட நோயறிதல் அல்ல.",
+confirm:"நடவடிக்கை எடுப்பதற்கு முன் முடிவைச் சரிபார்க்கவும்.",
+clearConfirm:"சேமித்துள்ள அனைத்து கண்டறிதல் பதிவுகளையும் அழிக்கவா?"
+}
+};
+
+let currentLanguage = "en";
+let currentImage = null;
+let cropModel = null;
+let pestModel = null;
+let currentResult = null;
+let cameraStream = null;
+let emailReady = false;
+let sensorTimer = null;
+let isPredicting = false;
+let historyRecords = loadHistory();
 
 /* =========================
-   TRANSLATION HELPER
+HELPERS
 ========================= */
+function $(id) {
+return document.getElementById(id);
+}
 
 function t(key) {
-  return (
-    translations[currentLanguage]?.[key] ||
-    translations.en[key] ||
-    key
-  );
+return (I18N[currentLanguage] && I18N[currentLanguage][key]) ||
+I18N.en[key] || key;
 }
 
-
-/* =========================
-   APPLY LANGUAGE
-========================= */
-
-function setupLanguage() {
-  const selector = document.getElementById("languageSelector");
-
-  if (!selector) return;
-
-  selector.value = currentLanguage;
-  applyLanguage();
-
-  selector.addEventListener("change", () => {
-    currentLanguage = selector.value;
-
-    localStorage.setItem("dashboardLanguage", currentLanguage);
-
-    applyLanguage();
-    renderHistory();
-    renderAlerts();
-    updatePestChart();
-    updateTrendChart();
-    updateESP32Dashboard(esp32Data);
-  });
+function translatedName(map, name) {
+return map[name] ? map[name][currentLanguage] || map[name].en : name;
 }
 
-function applyLanguage() {
-  document.querySelectorAll("[data-i18n]").forEach(element => {
-    const key = element.dataset.i18n;
-    const translated = t(key);
-
-    if (element.tagName === "INPUT" && element.placeholder !== undefined) {
-      element.placeholder = translated;
-    } else {
-      element.innerHTML = translated;
-    }
-  });
-
-  const emailInput = document.getElementById("alertEmail");
-  if (emailInput) {
-    emailInput.placeholder = t("emailPlaceholder");
-  }
-
-  const predictionName = document.getElementById("predictionName");
-
-  if (
-    predictionName &&
-    (
-      predictionName.textContent === "Waiting for image..." ||
-      predictionName.textContent === "படத்திற்காக காத்திருக்கிறது..."
-    )
-  ) {
-    predictionName.textContent = t("waitingImage");
-  }
+function showNotice(id, message, type = "success") {
+const el = $(id);
+if (!el) return;
+el.textContent = message;
+el.className = "notice show" + (type === "error" ? " error" : type === "warning" ? " warning" : "");
 }
-/* =========================================================
-   PART 2 — NAVIGATION, EMAILJS & CAMERA
-   Continue after Part 1
-========================================================= */
 
-
-/* =========================
-   DOM HELPER
-========================= */
-
-function $(id) {
-  return document.getElementById(id);
+function clearNotice(id) {
+const el = $(id);
+if (el) {
+el.textContent = "";
+el.className = "notice";
+}
 }
 
 function setText(id, value) {
-  const element = $(id);
-  if (element) element.textContent = value;
+const el = $(id);
+if (el) el.textContent = value;
 }
 
-function setStatus(id, message, className = "") {
-  const element = $(id);
-  if (!element) return;
-
-  element.textContent = message;
-
-  if (className) {
-    element.className = className;
-  }
+function setHidden(id, hidden) {
+const el = $(id);
+if (el) el.hidden = hidden;
 }
 
+function safeNumber(value) {
+const n = Number(value);
+return Number.isFinite(n) ? n : null;
+}
+
+function parseBoolean(value) {
+if (typeof value === "boolean") return value;
+if (typeof value === "number") return value !== 0;
+if (typeof value === "string") {
+const v = value.trim().toLowerCase();
+if (["1", "true", "on", "yes", "detected", "active"].includes(v)) return true;
+if (["0", "false", "off", "no", "inactive", "clear"].includes(v)) return false;
+}
+return null;
+}
+
+function formatPercent(value) {
+return (value * 100).toFixed(1) + "%";
+}
+
+function formatDate(value) {
+const date = new Date(value);
+return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+}
+
+function setButtonLoading(button, loading, label) {
+if (!button) return;
+button.disabled = loading;
+if (label) button.textContent = label;
+}
 
 /* =========================
-   DASHBOARD NAVIGATION
+LANGUAGE
 ========================= */
+function applyLanguage() {
+document.documentElement.lang = currentLanguage === "ta" ? "ta" : "en";
 
+document.querySelectorAll("[data-i18n]").forEach(el => {
+const key = el.dataset.i18n;
+if (I18N[currentLanguage][key]) {
+el.innerHTML = I18N[currentLanguage][key];
+}
+});
+
+const languageSelector = $("languageSelector");
+if (languageSelector) languageSelector.value = currentLanguage;
+
+if (currentResult) renderPrediction(currentResult, false);
+renderHistory();
+renderStats();
+renderChartLegend();
+}
+
+function setupLanguage() {
+const selector = $("languageSelector");
+if (!selector) return;
+selector.value = currentLanguage;
+selector.addEventListener("change", () => {
+currentLanguage = selector.value === "ta" ? "ta" : "en";
+applyLanguage();
+});
+}
+
+/* =========================
+NAVIGATION
+========================= */
 function setupNavigation() {
-  document.querySelectorAll("[data-section]").forEach(button => {
-    button.addEventListener("click", () => {
-      const sectionId = button.dataset.section;
+const links = Array.from(document.querySelectorAll(".nav-link"));
 
-      document.querySelectorAll(".dashboard-section").forEach(section => {
-        section.classList.remove("active");
-      });
-
-      const target = $(sectionId);
-
-      if (target) {
-        target.classList.add("active");
-      }
-
-      document.querySelectorAll("[data-section]").forEach(navButton => {
-        navButton.classList.toggle("active", navButton === button);
-      });
-    });
-  });
-
-  const startDetectionButton = $("startDetection");
-
-  if (startDetectionButton) {
-    startDetectionButton.addEventListener("click", () => {
-      const detectionSection = $("detectionSection");
-
-      if (detectionSection) {
-        detectionSection.scrollIntoView({
-          behavior: "smooth",
-          block: "start"
-        });
-      }
-    });
-  }
+function activate(hash) {
+links.forEach(link => {
+link.classList.toggle("active", link.getAttribute("href") === hash);
+});
 }
 
+links.forEach(link => {
+link.addEventListener("click", () => activate(link.getAttribute("href")));
+});
+
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+link.addEventListener("click", () => {
+const hash = link.getAttribute("href");
+if (links.some(nav => nav.getAttribute("href") === hash)) activate(hash);
+});
+});
+
+const sections = Array.from(document.querySelectorAll(".page-section"));
+if ("IntersectionObserver" in window) {
+const observer = new IntersectionObserver(entries => {
+const visible = entries
+.filter(entry => entry.isIntersecting)
+.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+if (visible) activate("#" + visible.target.id);
+}, { rootMargin: "-20% 0px -65% 0px", threshold: [0, .2, .5] });
+sections.forEach(section => observer.observe(section));
+}
+}
 
 /* =========================
-   EMAILJS INITIALIZATION
+MODEL LOADING
 ========================= */
+async function loadModels() {
+showNotice("modelStatus", t("modelLoading"), "warning");
 
-function initializeEmailJS() {
-  if (
-    typeof emailjs === "undefined" ||
-    typeof emailjs.init !== "function"
-  ) {
-    emailJSReady = false;
-
-    setStatus(
-      "emailStatus",
-      t("emailLibraryError"),
-      "status-error"
-    );
-
-    return;
-  }
-
-  try {
-    emailjs.init({
-      publicKey: EMAIL_PUBLIC_KEY
-    });
-
-    emailJSReady = true;
-
-    if (savedEmail) {
-      setText("emailStatus", t("savedEmail") + savedEmail);
-    } else {
-      setText("emailStatus", t("noEmailSaved"));
-    }
-  } catch (error) {
-    emailJSReady = false;
-
-    setStatus(
-      "emailStatus",
-      t("emailInitializationFailed") + error.message,
-      "status-error"
-    );
-  }
+if (!window.tmImage) {
+showNotice("modelStatus", t("modelError"), "error");
+return;
 }
 
+try {
+const results = await Promise.allSettled([
+window.tmImage.load(CROP_MODEL_URL + "model.json", CROP_MODEL_URL + "metadata.json"),
+window.tmImage.load(PEST_MODEL_URL + "model.json", PEST_MODEL_URL + "metadata.json")
+]);
+
+if (results[0].status === "fulfilled") cropModel = results[0].value;
+if (results[1].status === "fulfilled") pestModel = results[1].value;
+
+const ready = [];
+if (cropModel) ready.push("Crop");
+if (pestModel) ready.push("Pest");
+
+if (ready.length) {
+  showNotice("modelStatus", t("modelReady") + " " + ready.join(" + "), "success");
+} else {
+  showNotice("modelStatus", t("modelError"), "error");
+}
+
+} catch (error) {
+console.error("Model loading error:", error);
+showNotice("modelStatus", t("modelError"), "error");
+}
+}
 
 /* =========================
-   SAVE ALERT EMAIL
+IMAGE UPLOAD AND PREVIEW
 ========================= */
-
-function setupEmailConfiguration() {
-  const saveButton = $("saveEmail");
-  const testButton = $("testEmail");
-  const emailInput = $("alertEmail");
-
-  if (emailInput && savedEmail) {
-    emailInput.value = savedEmail;
-  }
-
-  if (saveButton) {
-    saveButton.addEventListener("click", saveAlertEmail);
-  }
-
-  if (testButton) {
-    testButton.addEventListener("click", sendTestEmail);
-  }
+function setCurrentImage(source, messageKey = "uploadSuccess") {
+currentImage = source;
+const image = $("uploadedImage");
+if (image) {
+image.src = source;
+image.style.display = "block";
+image.hidden = false;
+}
+setHidden("previewPlaceholder", true);
+setHidden("resultEmpty", false);
+setHidden("predictionResult", true);
+currentResult = null;
+setHidden("sendAlert", true);
+showNotice("uploadStatus", t(messageKey), "success");
+clearNotice("modelStatus");
 }
 
-function saveAlertEmail() {
-  const emailInput = $("alertEmail");
-
-  if (!emailInput) return;
-
-  const email = emailInput.value.trim();
-
-  if (!email) {
-    setStatus(
-      "emailStatus",
-      t("pleaseEnterEmail"),
-      "status-error"
-    );
-    return;
-  }
-
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if (!emailPattern.test(email)) {
-    setStatus(
-      "emailStatus",
-      t("validEmail"),
-      "status-error"
-    );
-    return;
-  }
-
-  savedEmail = email;
-
-  localStorage.setItem("agriAlertEmail", savedEmail);
-
-  setStatus(
-    "emailStatus",
-    t("emailSavedSuccessfully") + savedEmail,
-    "status-success"
-  );
+function handleImageFile(file) {
+if (!file || !file.type || !file.type.startsWith("image/")) {
+showNotice("uploadStatus", t("uploadError"), "error");
+return;
 }
 
+const reader = new FileReader();
+
+reader.onload = () => {
+setCurrentImage(reader.result, "uploadSuccess");
+};
+
+reader.onerror = () => {
+showNotice("uploadStatus", t("uploadError"), "error");
+};
+
+reader.readAsDataURL(file);
+}
+
+function setupUpload() {
+const input = $("imageUpload");
+const zone = $("dropZone");
+
+if (input) {
+input.addEventListener("change", event => {
+const file = event.target.files && event.target.files[0];
+if (file) handleImageFile(file);
+input.value = "";
+});
+}
+
+if (zone) {
+zone.addEventListener("dragover", event => {
+event.preventDefault();
+zone.classList.add("drag-over");
+});
+zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+zone.addEventListener("drop", event => {
+event.preventDefault();
+zone.classList.remove("drag-over");
+const file = event.dataTransfer && event.dataTransfer.files[0];
+if (file) handleImageFile(file);
+});
+}
+}
 
 /* =========================
-   EMAILJS SEND HELPER
+CAMERA
 ========================= */
-
-async function sendEmail(templateParams) {
-  if (!emailJSReady || typeof emailjs === "undefined") {
-    throw new Error(t("emailNotReady"));
-  }
-
-  return emailjs.send(
-    EMAIL_SERVICE_ID,
-    EMAIL_TEMPLATE_ID,
-    templateParams
-  );
-}
-
-
-/* =========================
-   TEST EMAIL
-========================= */
-
-async function sendTestEmail() {
-  if (!savedEmail) {
-    setStatus(
-      "emailStatus",
-      t("enterSaveEmail"),
-      "status-error"
-    );
-    return;
-  }
-
-  if (!emailJSReady) {
-    setStatus(
-      "emailStatus",
-      t("emailNotReady"),
-      "status-error"
-    );
-    return;
-  }
-
-  setStatus(
-    "emailStatus",
-    t("sendingTestEmail"),
-    "status-pending"
-  );
-
-  try {
-    const response = await sendEmail({
-      to_email: savedEmail,
-      email: savedEmail,
-      subject: "AI Smart Pest Detection — Test Alert",
-      message:
-        "This is a test email from the AI-Based Multi-Crop Pest Detection and Smart Alert System.",
-      crop_name: "System Test",
-      crop_status: "Test",
-      pest_name: "No_Pest",
-      confidence: "100%"
-    });
-
-    if (response && response.status === 200) {
-      setStatus(
-        "emailStatus",
-        t("testEmailSuccess") + savedEmail,
-        "status-success"
-      );
-    } else {
-      setStatus(
-        "emailStatus",
-        t("unexpectedEmailResponse"),
-        "status-error"
-      );
-    }
-  } catch (error) {
-    setStatus(
-      "emailStatus",
-      t("testEmailFailed") + error.message,
-      "status-error"
-    );
-  }
-}
-
-
-/* =========================
-   CAMERA SETUP
-========================= */
-
-function setupCameraControls() {
-  const startButton = $("startCamera");
-  const captureButton = $("captureImage");
-  const stopButton = $("stopCamera");
-  const uploadInput = $("imageUpload");
-
-  if (startButton) {
-    startButton.addEventListener("click", startCamera);
-  }
-
-  if (captureButton) {
-    captureButton.addEventListener("click", captureCameraImage);
-  }
-
-  if (stopButton) {
-    stopButton.addEventListener("click", stopCamera);
-  }
-
-  if (uploadInput) {
-    uploadInput.addEventListener("change", handleImageUpload);
-  }
-
-  updateCameraButtons(false);
-}
-
-
-/* =========================
-   START CAMERA
-========================= */
-
 async function startCamera() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    setStatus(
-      "predictionDetails",
-      "Camera access is unavailable. Use HTTPS or upload an image.",
-      "status-error"
-    );
-    return;
-  }
-
-  stopCamera();
-
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: currentFacingMode
-      },
-      audio: false
-    });
-
-    const video = $("camera");
-
-    if (!video) {
-      stopCamera();
-      return;
-    }
-
-    video.srcObject = cameraStream;
-    video.hidden = false;
-
-    await video.play();
-
-    const placeholder = $("cameraPlaceholder");
-
-    if (placeholder) {
-      placeholder.hidden = true;
-    }
-
-    updateCameraButtons(true);
-
-    setText("predictionDetails", "Camera ready. Capture an image to detect.");
-
-  } catch (error) {
-    stopCamera();
-
-    setStatus(
-      "predictionDetails",
-      t("cameraCouldNotStart") + error.message,
-      "status-error"
-    );
-  }
+if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+showNotice("uploadStatus", t("cameraPermission"), "error");
+return;
 }
 
+try {
+cameraStream = await navigator.mediaDevices.getUserMedia({
+video: { facingMode: { ideal: "environment" } },
+audio: false
+});
 
-/* =========================
-   CAMERA BUTTON STATES
-========================= */
+const video = $("camera");
+video.srcObject = cameraStream;
+video.style.display = "block";
+video.hidden = false;
+await video.play();
 
-function updateCameraButtons(cameraRunning) {
-  const captureButton = $("captureImage");
-  const stopButton = $("stopCamera");
+$("captureImage").disabled = false;
+$("stopCamera").disabled = false;
+$("startCamera").disabled = true;
+showNotice("uploadStatus", t("cameraPermission"), "warning");
 
-  if (captureButton) {
-    captureButton.disabled = !cameraRunning;
-  }
-
-  if (stopButton) {
-    stopButton.disabled = !cameraRunning;
-  }
+} catch (error) {
+console.error("Camera error:", error);
+showNotice("uploadStatus", t("cameraError") + " " + t("cameraPermission"), "error");
+}
 }
 
+function captureCameraImage() {
+const video = $("camera");
+const canvas = $("cameraCanvas");
 
-/* =========================
-   CAPTURE CAMERA IMAGE
-========================= */
-
-async function captureCameraImage() {
-  const video = $("camera");
-
-  if (
-    !video ||
-    !video.srcObject ||
-    video.videoWidth === 0 ||
-    video.videoHeight === 0
-  ) {
-    setStatus(
-      "predictionDetails",
-      "Camera is not ready. Start the camera first.",
-      "status-error"
-    );
-    return;
-  }
-
-  const canvas = document.createElement("canvas");
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    setStatus(
-      "predictionDetails",
-      "Unable to capture the camera image.",
-      "status-error"
-    );
-    return;
-  }
-
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  const image = new Image();
-
-  image.onload = async () => {
-    await runPrediction(image);
-  };
-
-  image.onerror = () => {
-    setStatus(
-      "predictionDetails",
-      "Unable to process the captured image.",
-      "status-error"
-    );
-  };
-
-  image.src = canvas.toDataURL("image/jpeg", 0.92);
+if (!video || !canvas || !video.videoWidth || !video.videoHeight) {
+showNotice("uploadStatus", t("cameraError"), "error");
+return;
 }
 
-
-/* =========================
-   STOP CAMERA
-========================= */
+canvas.width = video.videoWidth;
+canvas.height = video.videoHeight;
+const context = canvas.getContext("2d");
+context.drawImage(video, 0, 0, canvas.width, canvas.height);
+setCurrentImage(canvas.toDataURL("image/jpeg", 0.92), "captured");
+stopCamera();
+}
 
 function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(track => track.stop());
-    cameraStream = null;
-  }
-
-  const video = $("camera");
-
-  if (video) {
-    video.pause();
-    video.srcObject = null;
-    video.hidden = true;
-  }
-
-  const placeholder = $("cameraPlaceholder");
-
-  if (placeholder) {
-    placeholder.hidden = false;
-  }
-
-  updateCameraButtons(false);
+if (cameraStream) {
+cameraStream.getTracks().forEach(track => track.stop());
+cameraStream = null;
 }
 
-
-/* =========================
-   HANDLE IMAGE UPLOAD
-========================= */
-
-function handleImageUpload(event) {
-  const file = event.target.files && event.target.files[0];
-
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    setStatus(
-      "predictionDetails",
-      "Please select a valid image file.",
-      "status-error"
-    );
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    const image = new Image();
-
-    image.onload = async () => {
-      const uploadedImage = $("uploadedImage");
-
-      if (uploadedImage) {
-        uploadedImage.src = image.src;
-        uploadedImage.hidden = false;
-      }
-
-      await runPrediction(image);
-    };
-
-    image.onerror = () => {
-      setStatus(
-        "predictionDetails",
-        "Unable to load the selected image.",
-        "status-error"
-      );
-    };
-
-    image.src = reader.result;
-  };
-
-  reader.onerror = () => {
-    setStatus(
-      "predictionDetails",
-      "Unable to read the selected file.",
-      "status-error"
-    );
-  };
-
-  reader.readAsDataURL(file);
-}
-/* =========================================================
-   PART 3 — LOAD AI MODELS & DETECT CROP / PEST
-   Continue after Part 2
-========================================================= */
-
-
-/* =========================
-   LOAD BOTH AI MODELS
-========================= */
-
-async function loadAIModels() {
-  setText("modelStatus", "Loading both AI models...");
-
-  try {
-    if (typeof tmImage === "undefined") {
-      throw new Error(
-        "Teachable Machine library not loaded. Check the script tag in index.html."
-      );
-    }
-
-    const cropBase = CROP_MODEL_URL.replace(/\/?$/, "/");
-    const pestBase = PEST_MODEL_URL.replace(/\/?$/, "/");
-
-    // Load crop type and health model
-    cropModel = await tmImage.load(
-      cropBase + "model.json",
-      cropBase + "metadata.json"
-    );
-
-    // Load pest classification model
-    pestModel = await tmImage.load(
-      pestBase + "model.json",
-      pestBase + "metadata.json"
-    );
-
-    cropModelClasses = cropModel.getTotalClasses();
-    pestModelClasses = pestModel.getTotalClasses();
-
-    setText("modelStatus", "2 AI Models Ready");
-    setText("apiStatus", "AI Ready");
-
-    console.log("Crop model classes:", cropModelClasses);
-    console.log("Pest model classes:", pestModelClasses);
-
-    return true;
-
-  } catch (error) {
-    cropModel = null;
-    pestModel = null;
-
-    setText("modelStatus", "Model Loading Failed");
-    setText("apiStatus", "AI Error");
-
-    console.error("AI model loading error:", error);
-
-    setStatus(
-      "predictionDetails",
-      "Unable to load AI models: " + error.message,
-      "status-error"
-    );
-
-    return false;
-  }
+const video = $("camera");
+if (video) {
+video.pause();
+video.srcObject = null;
+video.style.display = "none";
 }
 
-
-/* =========================
-   NORMALIZE CLASS NAMES
-========================= */
-
-function normalizeClassName(name) {
-  return String(name || "")
-    .trim()
-    .replace(/[\s-]+/g, "_")
-    .toLowerCase();
+if ($("captureImage")) $("captureImage").disabled = true;
+if ($("stopCamera")) $("stopCamera").disabled = true;
+if ($("startCamera")) $("startCamera").disabled = false;
 }
 
-
 /* =========================
-   IDENTIFY CROP & HEALTH
+PREDICTION
 ========================= */
+function normalisePrediction(prediction) {
+const entries = prediction.map(item => ({
+className: String(item.className || item.class || "Unknown"),
+probability: Math.max(0, Math.min(1, Number(item.probability) || 0))
+}));
 
-function parseCropPrediction(prediction) {
-  const rawName = prediction.className || "";
-  const normalized = normalizeClassName(rawName);
-
-  const crops = [
-    "paddy",
-    "chilli",
-    "cotton",
-    "tomato",
-    "brinjal"
-  ];
-
-  const crop = crops.find(name =>
-    normalized.includes(name)
-  );
-
-  let status = "Unknown";
-
-  if (normalized.includes("healthy")) {
-    status = "Healthy";
-  } else if (
-    normalized.includes("affected") ||
-    normalized.includes("diseased") ||
-    normalized.includes("unhealthy")
-  ) {
-    status = "Affected";
-  }
-
-  return {
-    crop: crop
-      ? crop.charAt(0).toUpperCase() + crop.slice(1)
-      : "Unknown",
-
-    status: status,
-
-    className: rawName,
-
-    confidence: Number(prediction.probability) || 0
-  };
+entries.sort((a, b) => b.probability - a.probability);
+return entries;
 }
 
+function parseCropClass(className) {
+const match = String(className).match(/^(Paddy|Chilli|Cotton|Tomato|Brinjal)_(Healthy|Affected)$/i);
+if (!match) return null;
 
-/* =========================
-   IDENTIFY PEST
-========================= */
-
-function parsePestPrediction(prediction) {
-  const rawName = prediction.className || "";
-  const normalized = normalizeClassName(rawName);
-
-  const pestClasses = [
-    "caterpillar",
-    "aphid",
-    "thrips",
-    "whitefly",
-    "other_pest",
-    "no_pest"
-  ];
-
-  const pest = pestClasses.find(name =>
-    normalized === name ||
-    normalized.includes(name)
-  );
-
-  const pestLabels = {
-    caterpillar: "Caterpillar",
-    aphid: "Aphid",
-    thrips: "Thrips",
-    whitefly: "Whitefly",
-    other_pest: "Other_Pest",
-    no_pest: "No_Pest"
-  };
-
-  return {
-    pest: pest ? pestLabels[pest] : rawName || "Unknown",
-    className: rawName,
-    confidence: Number(prediction.probability) || 0
-  };
+const cropKey = Object.keys(CROP_NAMES).find(key => key.toLowerCase() === match[1].toLowerCase());
+return {
+crop: cropKey,
+state: match[2].toLowerCase() === "healthy" ? "healthy" : "affected"
+};
 }
 
+function evaluatePrediction(predictions, mode) {
+const sorted = normalisePrediction(predictions);
+if (!sorted.length) throw new Error("The model returned no predictions.");
 
-/* =========================
-   RUN BOTH PREDICTIONS
-========================= */
+const top = sorted[0];
+const second = sorted[1] || { probability: 0 };
+const gap = top.probability - second.probability;
+const lowConfidence = top.probability < MIN_CONFIDENCE;
+const ambiguous = sorted.length > 1 && gap < MIN_CONFIDENCE_GAP;
 
-async function runPrediction(image) {
-  if (!cropModel || !pestModel) {
-    setStatus(
-      "predictionDetails",
-      t("modelStillLoading"),
-      "status-error"
-    );
-    return;
-  }
+let parsed = null;
+if (mode === "crop") parsed = parseCropClass(top.className);
 
-  setText("predictionName", "Analyzing image...");
-  setText("predictionDetails", "Running crop and pest AI models...");
-  setText("predictionConfidence", "--");
+const uncertain = lowConfidence || ambiguous ||
+(mode === "crop" && !parsed) ||
+(mode === "pest" && !PEST_CLASSES.includes(top.className));
 
-  try {
-    // Model 1: Crop type and health
-    const cropPredictions = await cropModel.predict(image);
-
-    // Model 2: Pest classification
-    const pestPredictions = await pestModel.predict(image);
-
-    const bestCrop = cropPredictions.reduce((best, item) =>
-      item.probability > best.probability ? item : best
-    );
-
-    const bestPest = pestPredictions.reduce((best, item) =>
-      item.probability > best.probability ? item : best
-    );
-
-    const cropResult = parseCropPrediction(bestCrop);
-    const pestResult = parsePestPrediction(bestPest);
-
-    const result = {
-      crop: cropResult.crop,
-      cropStatus: cropResult.status,
-      cropClass: cropResult.className,
-      cropConfidence: cropResult.confidence,
-
-      pest: pestResult.pest,
-      pestClass: pestResult.className,
-      pestConfidence: pestResult.confidence,
-
-      timestamp: new Date().toISOString()
-    };
-
-    // Display result and update dashboard
-    displayPredictionResult(result);
-
-    // Save the detection to history and update analytics
-    saveDetectionRecord(result);
-
-    // Send email only when a pest is detected
-    if (result.pest !== "No_Pest" && result.pest !== "Unknown") {
-      await handlePestAlert(result);
-    }
-
-    console.log("AI prediction result:", result);
-
-  } catch (error) {
-    console.error("Prediction error:", error);
-
-    setStatus(
-      "predictionDetails",
-      t("predictionFailed") + error.message,
-      "status-error"
-    );
-  }
+return {
+mode,
+predictions: sorted,
+top,
+confidence: top.probability,
+gap,
+uncertain,
+reason: lowConfidence ? "lowConfidence" : ambiguous ? "ambiguous" : "lowConfidence",
+crop: parsed ? parsed.crop : null,
+cropState: parsed ? parsed.state : null,
+pest: mode === "pest" && PEST_CLASSES.includes(top.className) ? top.className : null,
+pestFound: mode === "pest" && top.className !== "No_Pest",
+alertEligible: mode === "pest" && !uncertain && top.className !== "No_Pest" &&
+top.probability >= MIN_CONFIDENCE && gap >= MIN_CONFIDENCE_GAP,
+timestamp: new Date().toISOString()
+};
 }
 
+async function runPrediction(mode) {
+if (isPredicting) return;
 
-/* =========================
-   DISPLAY PREDICTION RESULT
-========================= */
-
-function displayPredictionResult(result) {
-  const cropStatusText =
-    result.cropStatus === "Healthy"
-      ? t("healthy")
-      : result.cropStatus === "Affected"
-        ? "Affected"
-        : "Unknown";
-
-  const pestText =
-    result.pest === "No_Pest"
-      ? "No Pest"
-      : result.pest.replace(/_/g, " ");
-
-  setText(
-    "predictionName",
-    `${result.crop} — ${cropStatusText}`
-  );
-
-  setText(
-    "predictionDetails",
-    `Pest: ${pestText}`
-  );
-
-  setText(
-    "predictionConfidence",
-    `${(result.pestConfidence * 100).toFixed(1)}%`
-  );
-
-  // Update crop health information if the element exists
-  setText("cropStatusValue", cropStatusText);
-  setText("cropNameValue", result.crop);
-  setText("pestNameValue", pestText);
-
-  // Display confidence scores from both models
-  renderPredictionScores(result);
-
-  // Show the current result in the dashboard
-  const resultPanel = $("predictionResult");
-
-  if (resultPanel) {
-    resultPanel.hidden = false;
-  }
+if (!currentImage) {
+showNotice("modelStatus", t("noImage"), "error");
+return;
 }
 
-
-/* =========================
-   RENDER CONFIDENCE SCORES
-========================= */
-
-function renderPredictionScores(result) {
-  const container = $("predictionScores");
-
-  if (!container) return;
-
-  container.replaceChildren();
-
-  const scores = [
-    {
-      label: "Crop: " + result.crop,
-      value: result.cropConfidence
-    },
-    {
-      label: "Crop Health: " + result.cropStatus,
-      value: result.cropConfidence
-    },
-    {
-      label: "Pest: " + result.pest.replace(/_/g, " "),
-      value: result.pestConfidence
-    }
-  ];
-
-  scores.forEach(score => {
-    const wrapper = document.createElement("div");
-    wrapper.className = "prediction-score";
-
-    const label = document.createElement("div");
-    label.className = "prediction-score-label";
-    label.textContent = score.label;
-
-    const track = document.createElement("div");
-    track.className = "prediction-score-track";
-
-    const bar = document.createElement("div");
-    bar.className = "prediction-score-bar";
-
-    const percent = Math.max(
-      0,
-      Math.min(100, score.value * 100)
-    );
-
-    bar.style.width = `${percent}%`;
-
-    const value = document.createElement("span");
-    value.className = "prediction-score-value";
-    value.textContent = `${percent.toFixed(1)}%`;
-
-    track.appendChild(bar);
-
-    wrapper.appendChild(label);
-    wrapper.appendChild(track);
-    wrapper.appendChild(value);
-
-    container.appendChild(wrapper);
-  });
-}
-/* =========================================================
-   PART 4 — DETECTION HISTORY, DASHBOARD & PEST ALERTS
-   Continue after Part 3
-========================================================= */
-
-
-/* =========================
-   SAVE DETECTION RECORD
-========================= */
-
-function saveDetectionRecord(result) {
-  totalDetections++;
-
-  const pestDetected =
-    result.pest !== "No_Pest" &&
-    result.pest !== "Unknown";
-
-  if (pestDetected) {
-    activeThreats++;
-  }
-
-  if (Object.prototype.hasOwnProperty.call(pestCounts, result.pest)) {
-    pestCounts[result.pest]++;
-  } else {
-    pestCounts.Other_Pest++;
-  }
-
-  const record = {
-    id: Date.now(),
-    timestamp: result.timestamp || new Date().toISOString(),
-
-    crop: result.crop,
-    cropStatus: result.cropStatus,
-    cropConfidence: result.cropConfidence,
-
-    pest: result.pest,
-    pestConfidence: result.pestConfidence,
-
-    emailStatus: "pending"
-  };
-
-  detectionHistory.unshift(record);
-
-  // Keep the most recent 100 records
-  detectionHistory = detectionHistory.slice(0, 100);
-
-  saveDashboardData();
-
-  updateDashboardCounts();
-  renderHistory();
-  renderAlerts();
-  updatePestChart();
-  updateTrendChart();
-
-  return record.id;
+const model = mode === "crop" ? cropModel : pestModel;
+if (!model) {
+showNotice("modelStatus", t("modelError"), "error");
+await loadModels();
+return;
 }
 
+isPredicting = true;
+const cropButton = $("runCropDetection");
+const pestButton = $("runPestDetection");
+cropButton.disabled = true;
+pestButton.disabled = true;
+showNotice("modelStatus", t("modelLoading"), "warning");
 
-/* =========================
-   SAVE DASHBOARD DATA
-========================= */
+try {
+const image = $("uploadedImage");
+const predictions = await model.predict(image);
+const result = evaluatePrediction(predictions, mode);
+currentResult = result;
 
-function saveDashboardData() {
-  localStorage.setItem(
-    "totalDetections",
-    String(totalDetections)
-  );
+addHistory(result);
+renderPrediction(result, true);
+renderStats();
+drawCharts();
+showNotice("modelStatus", t("scanComplete"), "success");
 
-  localStorage.setItem(
-    "activeThreats",
-    String(activeThreats)
-  );
-
-  localStorage.setItem(
-    "emailAlerts",
-    String(emailAlerts)
-  );
-
-  localStorage.setItem(
-    "detectionHistory",
-    JSON.stringify(detectionHistory)
-  );
-
-  localStorage.setItem(
-    "pestCounts",
-    JSON.stringify(pestCounts)
-  );
+} catch (error) {
+console.error("Prediction error:", error);
+showNotice("modelStatus", t("modelError"), "error");
+} finally {
+isPredicting = false;
+cropButton.disabled = false;
+pestButton.disabled = false;
+}
 }
 
+function renderPrediction(result, count) {
+setHidden("resultEmpty", true);
+setHidden("predictionResult", false);
 
-/* =========================
-   UPDATE DASHBOARD COUNTS
-========================= */
+const isCrop = result.mode === "crop";
+const modeLabel = isCrop ? t("cropModel") : t("pestModel");
+setText("resultType", modeLabel);
+setText("predictionConfidence", formatPercent(result.confidence));
 
-function updateDashboardCounts() {
-  setText("totalDetections", totalDetections);
-  setText("activeThreats", activeThreats);
-  setText("emailAlerts", emailAlerts);
-
-  setText("modelStatus", cropModel && pestModel
-    ? "2 AI Models Ready"
-    : "Models Not Ready"
-  );
-
-  const badge = $("alertCountBadge");
-
-  if (badge) {
-    badge.textContent = String(
-      detectionHistory.filter(record =>
-        record.pest !== "No_Pest" &&
-        record.pest !== "Unknown"
-      ).length
-    );
-  }
+const bar = $("confidenceBar");
+if (bar) {
+bar.style.width = (result.confidence * 100) + "%";
+bar.style.background = result.uncertain
+? "linear-gradient(90deg,#e4a33a,#f2ce71)"
+: result.mode === "pest" && result.pestFound
+? "linear-gradient(90deg,#ed8b31,#e14c4c)"
+: "linear-gradient(90deg,#2a9b5b,#8acb64)";
 }
 
+let title = result.top.className;
+let detail = t("caution");
+let icon = "🔬";
 
-/* =========================
-   FIND HISTORY RECORD
-========================= */
+if (isCrop) {
+const cropName = translatedName(CROP_NAMES, result.crop || "Unknown");
+title = cropName + " — " + (result.cropState === "healthy" ? t("healthy") : result.cropState === "affected" ? t("affected") : t("uncertain"));
+icon = result.cropState === "healthy" ? "🌿" : "🍂";
 
-function findHistoryRecord(recordId) {
-  return detectionHistory.find(
-    record => String(record.id) === String(recordId)
-  );
+if (result.uncertain) detail = t(result.reason);
+else detail = result.cropState === "healthy" ? t("cropHealthyText") : t("cropAffectedText");
+
+} else {
+title = translatedName(PEST_NAMES, result.pest || result.top.className);
+icon = result.pest === "No_Pest" ? "🌱" : "🐛";
+if (result.uncertain) detail = t(result.reason);
+else detail = result.pest === "No_Pest" ? t("noPestText") : t("pestAlertText");
 }
 
+setText("predictionName", title);
+setText("predictionDetails", detail + " " + t("confirm"));
+setText("resultIcon", icon);
 
-/* =========================
-   UPDATE EMAIL STATUS
-========================= */
+const scores = $("predictionScores");
+scores.replaceChildren();
 
-function updateRecordEmailStatus(recordId, status) {
-  const record = findHistoryRecord(recordId);
+result.predictions.slice(0, 5).forEach(item => {
+const row = document.createElement("div");
+row.className = "score-row";
 
-  if (!record) return;
-
-  record.emailStatus = status;
-
-  saveDashboardData();
-  renderHistory();
-  renderAlerts();
+const label = document.createElement("span");
+const parsedCrop = parseCropClass(item.className);
+if (parsedCrop) {
+  label.textContent = translatedName(CROP_NAMES, parsedCrop.crop) + " / " +
+    (parsedCrop.state === "healthy" ? t("healthy") : t("affected"));
+} else if (PEST_NAMES[item.className]) {
+  label.textContent = translatedName(PEST_NAMES, item.className);
+} else {
+  label.textContent = item.className;
 }
 
+const track = document.createElement("div");
+track.className = "score-track";
+const fill = document.createElement("div");
+fill.className = "score-fill";
+fill.style.width = (item.probability * 100) + "%";
+track.appendChild(fill);
 
-/* =========================
-   SEND PEST ALERT
-========================= */
+const value = document.createElement("span");
+value.className = "score-value";
+value.textContent = formatPercent(item.probability);
 
-async function handlePestAlert(result) {
-  const recordId = detectionHistory.length
-    ? detectionHistory[0].id
-    : null;
+row.append(label, track, value);
+scores.appendChild(row);
 
-  if (!savedEmail) {
-    updateRecordEmailStatus(recordId, "pending");
+});
 
-    addAlertMessage(
-      "Pest detected: " + result.pest +
-      ". No alert email is configured."
-    );
-
-    return;
-  }
-
-  if (!emailJSReady) {
-    updateRecordEmailStatus(recordId, "failed");
-
-    addAlertMessage(
-      "Pest detected: " + result.pest +
-      ". Email service is unavailable."
-    );
-
-    return;
-  }
-
-  setStatus(
-    "emailStatus",
-    t("pestSendingEmail"),
-    "status-pending"
-  );
-
-  const cropName = result.crop || "Unknown";
-  const cropStatus = result.cropStatus || "Unknown";
-  const pestName = result.pest || "Unknown";
-
-  const cropConfidence =
-    (Number(result.cropConfidence || 0) * 100).toFixed(1) + "%";
-
-  const pestConfidence =
-    (Number(result.pestConfidence || 0) * 100).toFixed(1) + "%";
-
-  try {
-    const response = await sendEmail({
-      to_email: savedEmail,
-      email: savedEmail,
-
-      subject: "AI Pest Alert — " + cropName,
-
-      message:
-        "Pest detected by the AI Smart Pest Detection System.\n" +
-        "Crop: " + cropName + "\n" +
-        "Crop Status: " + cropStatus + "\n" +
-        "Crop Confidence: " + cropConfidence + "\n" +
-        "Pest: " + pestName + "\n" +
-        "Pest Confidence: " + pestConfidence + "\n" +
-        "Time: " + new Date().toLocaleString(),
-
-      crop_name: cropName,
-      crop_status: cropStatus,
-      crop_confidence: cropConfidence,
-
-      pest_name: pestName,
-      confidence: pestConfidence,
-
-      timestamp: new Date().toLocaleString()
-    });
-
-    if (!response || response.status !== 200) {
-      throw new Error("Email service returned an unexpected response.");
-    }
-
-    emailAlerts++;
-
-    saveDashboardData();
-
-    updateRecordEmailStatus(recordId, "sent");
-    updateDashboardCounts();
-
-    setStatus(
-      "emailStatus",
-      t("pestAlertSuccess") + savedEmail,
-      "status-success"
-    );
-
-    addAlertMessage(
-      "Pest alert sent: " + pestName +
-      " detected on " + cropName + "."
-    );
-
-  } catch (error) {
-    console.error("Pest alert email error:", error);
-
-    updateRecordEmailStatus(recordId, "failed");
-
-    setStatus(
-      "emailStatus",
-      t("pestEmailFailed") + error.message,
-      "status-error"
-    );
-
-    addAlertMessage(
-      "Pest detected: " + pestName +
-      ". Email failed: " + error.message
-    );
-  }
+const uncertainty = $("uncertaintyNotice");
+if (result.uncertain) {
+uncertainty.textContent = t(result.reason);
+uncertainty.className = "notice show warning";
+uncertainty.hidden = false;
+} else {
+uncertainty.hidden = true;
+uncertainty.className = "notice";
 }
 
+// Never automatically send an email for a low-confidence or ambiguous prediction.
+setHidden("sendAlert", !result.alertEligible);
 
-/* =========================
-   ADD ALERT MESSAGE
-========================= */
-
-function addAlertMessage(message) {
-  const alerts = JSON.parse(
-    localStorage.getItem("pestAlerts") || "[]"
-  );
-
-  alerts.unshift({
-    id: Date.now(),
-    message,
-    timestamp: new Date().toISOString()
-  });
-
-  localStorage.setItem(
-    "pestAlerts",
-    JSON.stringify(alerts.slice(0, 50))
-  );
-
-  renderAlerts();
+if (count) renderHistory();
 }
 
-
 /* =========================
-   RENDER ALERTS
+HISTORY AND COUNTERS
 ========================= */
-
-function renderAlerts() {
-  const container = $("alertsList");
-
-  if (!container) return;
-
-  const alerts = JSON.parse(
-    localStorage.getItem("pestAlerts") || "[]"
-  );
-
-  container.replaceChildren();
-
-  if (alerts.length === 0) {
-    const empty = document.createElement("p");
-    empty.textContent = t("noAlerts");
-    container.appendChild(empty);
-    return;
-  }
-
-  alerts.slice(0, 10).forEach(alert => {
-    const item = document.createElement("div");
-    item.className = "alert-item";
-
-    const message = document.createElement("p");
-    message.textContent = alert.message;
-
-    const time = document.createElement("small");
-
-    const date = new Date(alert.timestamp);
-
-    time.textContent = Number.isNaN(date.getTime())
-      ? t("unknownTime")
-      : date.toLocaleString();
-
-    item.appendChild(message);
-    item.appendChild(time);
-
-    container.appendChild(item);
-  });
+function loadHistory() {
+try {
+const saved = JSON.parse(localStorage.getItem("smartCropGuardHistory") || "[]");
+return Array.isArray(saved) ? saved.slice(0, 100) : [];
+} catch {
+return [];
+}
 }
 
+function saveHistory() {
+try {
+localStorage.setItem("smartCropGuardHistory", JSON.stringify(historyRecords.slice(0, 100)));
+} catch (error) {
+console.warn("History could not be saved:", error);
+}
+}
 
-/* =========================
-   RENDER DETECTION HISTORY
-========================= */
+function addHistory(result) {
+const record = {
+id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+timestamp: result.timestamp,
+mode: result.mode,
+finding: result.top.className,
+confidence: result.confidence,
+uncertain: result.uncertain,
+alertEligible: result.alertEligible,
+pestFound: result.mode === "pest" && result.pestFound
+};
+
+historyRecords.unshift(record);
+historyRecords = historyRecords.slice(0, 100);
+saveHistory();
+}
 
 function renderHistory() {
-  const container = $("historyList");
+const body = $("historyBody");
+if (!body) return;
+body.replaceChildren();
 
-  if (!container) return;
-
-  container.replaceChildren();
-
-  if (detectionHistory.length === 0) {
-    const empty = document.createElement("p");
-    empty.textContent = t("noHistory");
-    container.appendChild(empty);
-    return;
-  }
-
-  detectionHistory.slice(0, 50).forEach(record => {
-    const item = document.createElement("article");
-    item.className = "history-item";
-
-    const heading = document.createElement("h4");
-
-    heading.textContent =
-      record.crop + " — " + record.cropStatus;
-
-    const pest = document.createElement("p");
-
-    pest.textContent =
-      "Pest: " + String(record.pest).replace(/_/g, " ");
-
-    const confidence = document.createElement("p");
-
-    confidence.textContent =
-      "Pest confidence: " +
-      (Number(record.pestConfidence || 0) * 100).toFixed(1) +
-      "%";
-
-    const email = document.createElement("p");
-
-    email.textContent =
-      "Email: " + String(record.emailStatus || "pending");
-
-    const time = document.createElement("small");
-    const date = new Date(record.timestamp);
-
-    time.textContent = Number.isNaN(date.getTime())
-      ? t("unknownTime")
-      : date.toLocaleString();
-
-    item.appendChild(heading);
-    item.appendChild(pest);
-    item.appendChild(confidence);
-    item.appendChild(email);
-    item.appendChild(time);
-
-    container.appendChild(item);
-  });
+if (!historyRecords.length) {
+const row = document.createElement("tr");
+const cell = document.createElement("td");
+cell.colSpan = 5;
+cell.className = "empty-table";
+cell.textContent = t("noHistory");
+row.appendChild(cell);
+body.appendChild(row);
+return;
 }
 
-
-/* =========================
-   CLEAR DETECTION HISTORY
-========================= */
-
-function setupClearHistory() {
-  const button = $("clearHistory");
-
-  if (!button) return;
-
-  button.addEventListener("click", () => {
-    if (!window.confirm(t("clearHistoryConfirm"))) {
-      return;
-    }
-
-    detectionHistory = [];
-    totalDetections = 0;
-    activeThreats = 0;
-
-    pestCounts = {
-      Aphid: 0,
-      Caterpillar: 0,
-      Thrips: 0,
-      Whitefly: 0,
-      Other_Pest: 0,
-      No_Pest: 0
-    };
-
-    localStorage.removeItem("pestAlerts");
-
-    saveDashboardData();
-
-    renderHistory();
-    renderAlerts();
-    updateDashboardCounts();
-    updatePestChart();
-    updateTrendChart();
-
-    setText("predictionDetails", "Detection history cleared.");
-  });
-}
-/* =========================================================
-   PART 5 — CHARTS, ESP32, LED STATUS & INITIALIZATION
-   Continue after Part 4
-========================================================= */
-
-
-/* =========================
-   PEST DETECTION CHART
-========================= */
-
-function updatePestChart() {
-  const canvas = $("pestChart");
-
-  if (!canvas || typeof Chart === "undefined") return;
-
-  const labels = [
-    "Aphid",
-    "Caterpillar",
-    "Thrips",
-    "Whitefly",
-    "Other Pest",
-    "No Pest"
-  ];
-
-  const values = [
-    pestCounts.Aphid || 0,
-    pestCounts.Caterpillar || 0,
-    pestCounts.Thrips || 0,
-    pestCounts.Whitefly || 0,
-    pestCounts.Other_Pest || 0,
-    pestCounts.No_Pest || 0
-  ];
-
-  if (pestChart) {
-    pestChart.data.labels = labels;
-    pestChart.data.datasets[0].data = values;
-    pestChart.update();
-    return;
-  }
-
-  pestChart = new Chart(canvas, {
-    type: "bar",
-
-    data: {
-      labels,
-
-      datasets: [{
-        label: "Pest Detections",
-        data: values,
-        borderWidth: 1,
-        borderRadius: 6
-      }]
-    },
-
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0
-          }
-        }
-      },
-
-      plugins: {
-        legend: {
-          display: false
-        }
-      }
-    }
-  });
-}
-
-
-/* =========================
-   DETECTION TREND CHART
-========================= */
-
-function updateTrendChart() {
-  const canvas = $("trendChart");
-
-  if (!canvas || typeof Chart === "undefined") return;
-
-  const recentRecords = detectionHistory
-    .slice(0, 10)
-    .reverse();
-
-  const labels = recentRecords.map(record => {
-    const date = new Date(record.timestamp);
-
-    return Number.isNaN(date.getTime())
-      ? "--"
-      : date.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit"
-        });
-  });
-
-  const values = recentRecords.map(record =>
-    record.pest !== "No_Pest" &&
-    record.pest !== "Unknown"
-      ? 1
-      : 0
-  );
-
-  if (trendChart) {
-    trendChart.data.labels = labels;
-    trendChart.data.datasets[0].data = values;
-    trendChart.update();
-    return;
-  }
-
-  trendChart = new Chart(canvas, {
-    type: "line",
-
-    data: {
-      labels,
-
-      datasets: [{
-        label: "Pest Detected",
-        data: values,
-        tension: 0.3,
-        fill: false,
-        borderWidth: 2
-      }]
-    },
-
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 1,
-          ticks: {
-            stepSize: 1,
-            callback: value => value === 1 ? "Detected" : "None"
-          }
-        }
-      }
-    }
-  });
-}
-
-
-/* =========================
-   ESP32 CONFIGURATION
-========================= */
-
-// Change this to your ESP32's actual address.
-// ESP32 and the device running this dashboard must be
-// connected to a compatible network.
-
-const ESP32_POLL_INTERVAL = 3000;
-
-
-/* =========================
-   ESP32 VALUE HELPERS
-========================= */
-
-function getFirstDefined(data, keys, fallback = null) {
-  for (const key of keys) {
-    if (
-      data &&
-      data[key] !== undefined &&
-      data[key] !== null
-    ) {
-      return data[key];
-    }
-  }
-
-  return fallback;
-}
-
-
-function displaySensorValue(value, suffix = "") {
-  if (value === null || value === undefined || value === "") {
-    return "--";
-  }
-
-  if (typeof value === "number" && !Number.isFinite(value)) {
-    return "--";
-  }
-
-  return `${value}${suffix}`;
-}
-
-
-/* =========================
-   UPDATE ESP32 DASHBOARD
-========================= */
-
-function updateESP32Dashboard(data) {
-  if (!data) {
-    setText("esp32Status", "Offline");
-    setText("hardwareStatus", "Hardware Not Connected");
-
-    setText("irSensorValue", "--");
-    setText("distanceValue", "--");
-    setText("pestSensorValue", "--");
-
-    setText("irSensorStatus", "Waiting for data");
-    setText("ultrasonicStatus", "Waiting for data");
-    setText("pestSensorStatus", "Waiting for data");
-
-    setText("yellowLEDValue", "OFF");
-    setText("redLEDValue", "OFF");
-    setText("buzzerValue", "OFF");
-
-    return;
-  }
-
-  // IR sensor
-  const irValue = getFirstDefined(
-    data,
-    ["irSensor", "ir", "irValue", "ir_sensor"],
-    null
-  );
-
-  setText(
-    "irSensorValue",
-    displaySensorValue(irValue)
-  );
-
-  setText(
-    "irSensorStatus",
-    irValue === null
-      ? "No data"
-      : "Connected"
-  );
-
-  // Ultrasonic sensor
-  const distance = getFirstDefined(
-    data,
-    ["distance", "ultrasonicDistance", "distanceCm"],
-    null
-  );
-
-  setText(
-    "distanceValue",
-    displaySensorValue(distance, " cm")
-  );
-
-  setText(
-    "ultrasonicStatus",
-    distance === null
-      ? "No data"
-      : "Connected"
-  );
-
-  // Pest sensor
-  const pestSensor = getFirstDefined(
-    data,
-    ["pestSensor", "pest", "pestDetected", "pest_sensor"],
-    null
-  );
-
-  setText(
-    "pestSensorValue",
-    displaySensorValue(pestSensor)
-  );
-
-  setText(
-    "pestSensorStatus",
-    pestSensor === null
-      ? "No data"
-      : "Connected"
-  );
-
-  // Yellow LED: warning / detection indicator
-  const yellowLED = getFirstDefined(
-    data,
-    ["yellowLED", "yellowLed", "yellow_led"],
-    false
-  );
-
-  // Red LED: alert indicator
-  const redLED = getFirstDefined(
-    data,
-    ["redLED", "redLed", "red_led"],
-    false
-  );
-
-  const buzzer = getFirstDefined(
-    data,
-    ["buzzer", "buzzerState", "buzzer_state"],
-    false
-  );
-
-  setText(
-    "yellowLEDValue",
-    Boolean(yellowLED) ? "ON" : "OFF"
-  );
-
-  setText(
-    "redLEDValue",
-    Boolean(redLED) ? "ON" : "OFF"
-  );
-
-  setText(
-    "buzzerValue",
-    Boolean(buzzer) ? "ON" : "OFF"
-  );
-
-  setText("esp32Status", "Online");
-  setText("hardwareStatus", "Hardware Connected");
-
-  const esp32IP = $("esp32IP");
-
-  if (esp32IP) {
-    esp32IP.textContent = ESP32_API_URL;
-  }
-}
-
-
-/* =========================
-   FETCH ESP32 DATA
-========================= */
-
-async function fetchESP32Data() {
-  try {
-    const response = await fetch(ESP32_API_URL, {
-      method: "GET",
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    esp32Connected = true;
-    esp32Data = data;
-
-    updateESP32Dashboard(data);
-
-  } catch (error) {
-    esp32Connected = false;
-    esp32Data = null;
-
-    updateESP32Dashboard(null);
-
-    console.warn("ESP32 connection unavailable:", error.message);
-  }
-}
-
-
-/* =========================
-   START ESP32 MONITORING
-========================= */
-
-function startESP32Monitoring() {
-  if (esp32Timer) {
-    clearInterval(esp32Timer);
-  }
-
-  fetchESP32Data();
-
-  esp32Timer = setInterval(
-    fetchESP32Data,
-    ESP32_POLL_INTERVAL
-  );
-}
-
-
-/* =========================
-   LOAD SAVED DASHBOARD DATA
-========================= */
-
-function loadSavedDashboardData() {
-  totalDetections =
-    Number(localStorage.getItem("totalDetections")) || 0;
-
-  emailAlerts =
-    Number(localStorage.getItem("emailAlerts")) || 0;
-
-  activeThreats = detectionHistory.filter(record =>
-    record.pest !== "No_Pest" &&
-    record.pest !== "Unknown"
-  ).length;
-
-  updateDashboardCounts();
-  renderHistory();
-  renderAlerts();
-  updatePestChart();
-  updateTrendChart();
-}
-
-
-/* =========================
-   INITIALIZE DASHBOARD
-========================= */
-
-async function initializeDashboard() {
-  console.log("Initializing AI Smart Pest Dashboard...");
-
-  setupLanguage();
-  setupNavigation();
-  setupEmailConfiguration();
-  setupCameraControls();
-  setupClearHistory();
-
-  initializeEmailJS();
-
-  loadSavedDashboardData();
-
-  // Load the crop model and pest model
-  await loadAIModels();
-
-  // Start live ESP32 polling
-  startESP32Monitoring();
-
-  console.log("Dashboard initialization complete.");
-}
-
-
-/* =========================
-   PAGE STARTUP
-========================= */
-
-if (document.readyState === "loading") {
-  document.addEventListener(
-    "DOMContentLoaded",
-    initializeDashboard,
-    { once: true }
-  );
+historyRecords.forEach(record => {
+const row = document.createElement("tr");
+const time = document.createElement("td");
+time.textContent = formatDate(record.timestamp);
+
+const mode = document.createElement("td");
+mode.textContent = record.mode === "crop" ? t("cropMode") : t("pestMode");
+
+const finding = document.createElement("td");
+const parsedCrop = parseCropClass(record.finding);
+if (parsedCrop) {
+  finding.textContent = translatedName(CROP_NAMES, parsedCrop.crop) + " / " +
+    (parsedCrop.state === "healthy" ? t("healthy") : t("affected"));
 } else {
-  initializeDashboard();
+  finding.textContent = translatedName(PEST_NAMES, record.finding);
 }
 
+const confidence = document.createElement("td");
+confidence.textContent = formatPercent(record.confidence);
+
+const status = document.createElement("td");
+const pill = document.createElement("span");
+pill.className = "status-pill" + (record.uncertain ? " warning" : record.pestFound ? " danger" : "");
+pill.textContent = record.uncertain ? t("uncertain") :
+  record.pestFound ? t("pestFound") : t("scanComplete");
+status.appendChild(pill);
+
+row.append(time, mode, finding, confidence, status);
+body.appendChild(row);
+
+});
+}
+
+function renderStats() {
+setText("totalScans", historyRecords.length);
+setText("cropScans", historyRecords.filter(r => r.mode === "crop").length);
+setText("pestFindings", historyRecords.filter(r => r.mode === "pest" && r.pestFound && !r.uncertain).length);
+
+const date = $("currentDate");
+if (date) date.textContent = new Date().toLocaleDateString(
+currentLanguage === "ta" ? "ta-IN" : "en-IN",
+{ day: "numeric", month: "short", year: "numeric" }
+);
+}
 
 /* =========================
-   CLEANUP
+CHARTS — NO EXTRA LIBRARY
 ========================= */
+const CHART_COLORS = ["#2e9d60", "#ed8b31", "#4285db", "#8061d8", "#d94e4e", "#8abf57"];
+
+function drawCharts() {
+drawPestChart();
+drawTrendChart();
+renderChartLegend();
+}
+
+function drawPestChart() {
+const canvas = $("pestChart");
+if (!canvas) return;
+
+const ctx = canvas.getContext("2d");
+const width = Math.max(280, canvas.clientWidth || 300);
+const height = 240;
+const ratio = window.devicePixelRatio || 1;
+canvas.width = width * ratio;
+canvas.height = height * ratio;
+canvas.style.height = height + "px";
+ctx.scale(ratio, ratio);
+ctx.clearRect(0, 0, width, height);
+
+const names = PEST_CLASSES.filter(name => name !== "No_Pest");
+const values = names.map(name => historyRecords.filter(r => r.mode === "pest" && r.finding === name && !r.uncertain).length);
+const max = Math.max(1, ...values);
+const left = 12;
+const right = width - 40;
+const barHeight = 19;
+const gap = 16;
+
+names.forEach((name, i) => {
+const y = 16 + i * (barHeight + gap);
+const label = translatedName(PEST_NAMES, name);
+ctx.fillStyle = "#66766c";
+ctx.font = "11px Inter, sans-serif";
+ctx.textAlign = "left";
+ctx.fillText(label, left, y + 10, 95);
+
+const start = Math.min(115, width * .37);
+const available = Math.max(45, right - start);
+ctx.fillStyle = "#edf2ee";
+ctx.fillRect(start, y, available, barHeight);
+ctx.fillStyle = CHART_COLORS[i % CHART_COLORS.length];
+ctx.fillRect(start, y, available * values[i] / max, barHeight);
+ctx.fillStyle = "#263b2e";
+ctx.textAlign = "right";
+ctx.fillText(String(values[i]), width - 12, y + 13);
+
+});
+}
+
+function drawTrendChart() {
+const canvas = $("trendChart");
+if (!canvas) return;
+
+const ctx = canvas.getContext("2d");
+const width = Math.max(280, canvas.clientWidth || 300);
+const height = 240;
+const ratio = window.devicePixelRatio || 1;
+canvas.width = width * ratio;
+canvas.height = height * ratio;
+canvas.style.height = height + "px";
+ctx.scale(ratio, ratio);
+ctx.clearRect(0, 0, width, height);
+
+const recent = historyRecords.slice(0, 7).reverse();
+const values = recent.map(r => Math.round(r.confidence * 100));
+const pad = { left: 34, right: 15, top: 18, bottom: 38 };
+const chartW = width - pad.left - pad.right;
+const chartH = height - pad.top - pad.bottom;
+
+ctx.strokeStyle = "#e5ece7";
+ctx.fillStyle = "#829087";
+ctx.font = "10px Inter, sans-serif";
+ctx.textAlign = "right";
+
+[0, 25, 50, 75, 100].forEach(value => {
+const y = pad.top + chartH * (1 - value / 100);
+ctx.beginPath();
+ctx.moveTo(pad.left, y);
+ctx.lineTo(width - pad.right, y);
+ctx.stroke();
+ctx.fillText(value + "%", pad.left - 6, y + 3);
+});
+
+if (!values.length) {
+ctx.fillStyle = "#829087";
+ctx.textAlign = "center";
+ctx.fillText(t("noHistory"), width / 2, height / 2);
+return;
+}
+
+const xAt = i => values.length === 1
+? pad.left + chartW / 2
+: pad.left + (i / (values.length - 1)) * chartW;
+const yAt = value => pad.top + chartH * (1 - value / 100);
+
+ctx.strokeStyle = "#2e9d60";
+ctx.lineWidth = 3;
+ctx.beginPath();
+values.forEach((value, i) => {
+if (i === 0) ctx.moveTo(xAt(i), yAt(value));
+else ctx.lineTo(xAt(i), yAt(value));
+});
+ctx.stroke();
+
+values.forEach((value, i) => {
+ctx.beginPath();
+ctx.fillStyle = "#2e9d60";
+ctx.arc(xAt(i), yAt(value), 4, 0, Math.PI * 2);
+ctx.fill();
+ctx.fillStyle = "#53645a";
+ctx.font = "9px Inter, sans-serif";
+ctx.textAlign = "center";
+ctx.fillText((i + 1).toString(), xAt(i), height - 15);
+});
+}
+
+function renderChartLegend() {
+const legend = $("pestLegend");
+if (!legend) return;
+legend.replaceChildren();
+
+PEST_CLASSES.filter(name => name !== "No_Pest").forEach((name, i) => {
+const item = document.createElement("span");
+item.className = "legend-item";
+const dot = document.createElement("i");
+dot.className = "legend-dot";
+dot.style.background = CHART_COLORS[i % CHART_COLORS.length];
+const label = document.createElement("span");
+label.textContent = translatedName(PEST_NAMES, name);
+item.append(dot, label);
+legend.appendChild(item);
+});
+}
+
+/* =========================
+EMAILJS
+========================= */
+function setupEmail() {
+if (!window.emailjs) {
+showNotice("emailStatus", t("emailConfig"), "error");
+return;
+}
+
+try {
+window.emailjs.init({ publicKey: EMAIL_PUBLIC_KEY });
+emailReady = true;
+} catch (error) {
+console.error("EmailJS init error:", error);
+showNotice("emailStatus", t("emailConfig"), "error");
+}
+}
+
+function getRecipientEmail() {
+const email = ($("alertEmail").value || "").trim();
+return /^[^\s@]+@[^\s@]+.[^\s@]+$/.test(email) ? email : null;
+}
+
+async function sendEmail(templateParams) {
+if (!emailReady) {
+showNotice("emailStatus", t("emailConfig"), "error");
+return false;
+}
+
+try {
+await window.emailjs.send(EMAIL_SERVICE_ID, EMAIL_TEMPLATE_ID, templateParams);
+showNotice("emailStatus", t("emailSent"), "success");
+return true;
+} catch (error) {
+console.error("EmailJS send error:", error);
+showNotice("emailStatus", t("emailFailed"), "error");
+return false;
+}
+}
+
+async function sendTestEmail() {
+const recipient = getRecipientEmail();
+if (!recipient) {
+showNotice("emailStatus", t("emailMissing"), "error");
+return;
+}
+
+const button = $("testEmail");
+button.disabled = true;
+try {
+await sendEmail({
+to_email: recipient,
+recipient_email: recipient,
+subject: "SmartCropGuard Test Email",
+alert_type: "Test Notification",
+pest_name: "Test message",
+crop_name: "SmartCropGuard",
+confidence: "N/A",
+message: "This is a test email from SmartCropGuard. Email notification settings are being tested.",
+timestamp: new Date().toLocaleString()
+});
+} finally {
+button.disabled = false;
+}
+}
+
+async function sendPestAlert(result = currentResult) {
+if (!result || result.mode !== "pest" || !result.alertEligible) {
+showNotice("emailStatus", t("noAlert"), "warning");
+return;
+}
+
+const recipient = getRecipientEmail();
+if (!recipient) {
+showNotice("emailStatus", t("emailMissing"), "error");
+return;
+}
+
+const pestName = translatedName(PEST_NAMES, result.pest);
+await sendEmail({
+to_email: recipient,
+recipient_email: recipient,
+subject: "SmartCropGuard Pest Alert: " + result.pest,
+alert_type: "Pest Detection Alert",
+pest_name: pestName,
+crop_name: "Not identified",
+confidence: formatPercent(result.confidence),
+message: "AI detected a possible pest: " + result.pest + ". Confidence: " + formatPercent(result.confidence) + ". Please inspect the field before taking action.",
+timestamp: new Date().toLocaleString()
+});
+}
+
+/* =========================
+ESP32 SENSOR MONITORING
+========================= */
+function firstValue(data, keys) {
+for (const key of keys) {
+if (Object.prototype.hasOwnProperty.call(data, key) && data[key] !== null && data[key] !== "") {
+return data[key];
+}
+}
+return null;
+}
+
+function displaySensorValue(value) {
+return value === null || value === undefined ? "—" : String(value);
+}
+
+function updateLed(elementId, statusId, state) {
+const led = $(elementId);
+const label = $(statusId);
+if (!led || !label) return;
+
+led.classList.remove("on");
+if (state === true) {
+led.classList.add("on");
+label.textContent = t("enabled");
+} else if (state === false) {
+label.textContent = t("disabled");
+} else {
+label.textContent = "—";
+}
+}
+
+async function refreshSensors() {
+try {
+const response = await fetch(ESP32_API_URL, { cache: "no-store" });
+if (!response.ok) throw new Error("HTTP " + response.status);
+
+const data = await response.json();
+
+const ir = firstValue(data, ["ir", "irValue", "ir_sensor", "IR", "irDetected"]);
+const ultrasonic = firstValue(data, ["ultrasonic", "ultrasonicValue", "distance", "distance_cm", "ultrasonic_distance"]);
+const pest = firstValue(data, ["pest", "pestValue", "pest_sensor", "pestDetected", "pest_count"]);
+const yellow = parseBoolean(firstValue(data, ["yellowLed", "yellow_led", "yellowLED", "yellow", "ledYellow"]));
+const red = parseBoolean(firstValue(data, ["redLed", "red_led", "redLED", "red", "ledRed"]));
+
+setText("sensorStatus", t("online"));
+setText("sensorStatusText", new Date().toLocaleTimeString());
+setText("irValue", displaySensorValue(ir));
+setText("ultrasonicValue", ultrasonic === null ? "—" : String(ultrasonic) + (typeof ultrasonic === "number" ? " cm" : ""));
+setText("pestSensorValue", displaySensorValue(pest));
+setText("irDescription", t("sensorLoaded"));
+setText("ultrasonicDescription", t("sensorLoaded"));
+setText("pestSensorDescription", t("sensorLoaded"));
+
+updateLed("yellowLed", "yellowLedStatus", yellow);
+updateLed("redLed", "redLedStatus", red);
+showNotice("sensorMessage", t("sensorLoaded"), "success");
+
+} catch (error) {
+console.warn("ESP32 sensor error:", error);
+setText("sensorStatus", t("offline"));
+setText("sensorStatusText", t("sensorError"));
+showNotice("sensorMessage", t("sensorError"), "error");
+}
+}
+
+/* =========================
+EVENTS AND STARTUP
+========================= */
+function setupEvents() {
+$("startCamera").addEventListener("click", startCamera);
+$("captureImage").addEventListener("click", captureCameraImage);
+$("stopCamera").addEventListener("click", stopCamera);
+
+$("runCropDetection").addEventListener("click", () => runPrediction("crop"));
+$("runPestDetection").addEventListener("click", () => runPrediction("pest"));
+
+$("sendAlert").addEventListener("click", () => sendPestAlert(currentResult));
+$("testEmail").addEventListener("click", sendTestEmail);
+$("sendLatestAlert").addEventListener("click", () => {
+const latest = historyRecords.find(record => record.mode === "pest" && record.alertEligible);
+if (!latest) {
+showNotice("emailStatus", t("noAlert"), "warning");
+return;
+}
+const result = currentResult &&
+currentResult.timestamp === latest.timestamp &&
+currentResult.alertEligible ? currentResult : null;
+if (!result) {
+showNotice("emailStatus", t("noAlert"), "warning");
+return;
+}
+sendPestAlert(result);
+});
+
+$("refreshSensors").addEventListener("click", refreshSensors);
+
+$("clearHistory").addEventListener("click", () => {
+if (!window.confirm(t("clearConfirm"))) return;
+historyRecords = [];
+saveHistory();
+renderHistory();
+renderStats();
+drawCharts();
+showNotice("modelStatus", t("historyCleared"), "success");
+});
+
+window.addEventListener("resize", () => {
+drawCharts();
+});
 
 window.addEventListener("beforeunload", () => {
-  stopCamera();
-
-  if (esp32Timer) {
-    clearInterval(esp32Timer);
-    esp32Timer = null;
-  }
+stopCamera();
+if (sensorTimer) clearInterval(sensorTimer);
 });
+}
+
+function init() {
+setupLanguage();
+setupNavigation();
+setupUpload();
+setupEmail();
+setupEvents();
+applyLanguage();
+renderHistory();
+renderStats();
+drawCharts();
+loadModels();
+refreshSensors();
+sensorTimer = setInterval(refreshSensors, SENSOR_REFRESH_MS);
+}
+
+document.addEventListener("DOMContentLoaded", init);
